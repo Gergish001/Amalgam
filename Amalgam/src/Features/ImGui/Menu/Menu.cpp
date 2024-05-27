@@ -665,34 +665,7 @@ void CMenu::MenuVisuals()
 				FToggle("Trajectory on shot", Vars::Visuals::Simulation::TrajectoryOnShot);
 				FToggle("Swing prediction lines", Vars::Visuals::Simulation::SwingLines, FToggle_Middle);
 			} EndSection();
-			if (Vars::Debug::Info.Value)
-			{
-				if (Section("debug"))
-				{
-					FToggle("overwrite", Vars::Visuals::Trajectory::Overwrite);
-					FSlider("off x", Vars::Visuals::Trajectory::OffX, -25.f, 25.f, 0.5f, "%.1f", FSlider_Precision);
-					FSlider("off y", Vars::Visuals::Trajectory::OffY, -25.f, 25.f, 0.5f, "%.1f", FSlider_Precision);
-					FSlider("off z", Vars::Visuals::Trajectory::OffZ, -25.f, 25.f, 0.5f, "%.1f", FSlider_Precision);
-					FToggle("pipes", Vars::Visuals::Trajectory::Pipes);
-					FSlider("hull", Vars::Visuals::Trajectory::Hull, 0.f, 10.f, 0.5f, "%.1f", FSlider_Precision);
-					FSlider("speed", Vars::Visuals::Trajectory::Speed, 0.f, 5000.f, 50.f, "%.0f", FSlider_Precision);
-					FSlider("gravity", Vars::Visuals::Trajectory::Gravity, 0.f, 2.f, 0.1f, "%.1f", FSlider_Precision);
-					FToggle("no spin", Vars::Visuals::Trajectory::NoSpin);
-					FSlider("lifetime", Vars::Visuals::Trajectory::LifeTime, 0.f, 10.f, 0.1f, "%.1f", FSlider_Precision);
-					FSlider("up vel", Vars::Visuals::Trajectory::UpVelocity, 0.f, 1000.f, 50.f, "%.0f", FSlider_Precision);
-					FSlider("ang vel x", Vars::Visuals::Trajectory::AngVelocityX, -1000.f, 1000.f, 50.f, "%.0f", FSlider_Precision);
-					FSlider("ang vel y", Vars::Visuals::Trajectory::AngVelocityY, -1000.f, 1000.f, 50.f, "%.0f", FSlider_Precision);
-					FSlider("ang vel z", Vars::Visuals::Trajectory::AngVelocityZ, -1000.f, 1000.f, 50.f, "%.0f", FSlider_Precision);
-					FSlider("drag", Vars::Visuals::Trajectory::Drag, 0.f, 2.f, 0.1f, "%.1f", FSlider_Precision);
-					FSlider("drag x", Vars::Visuals::Trajectory::DragBasisX, 0.f, 0.1f, 0.01f, "%.2f", FSlider_Precision);
-					FSlider("drag y", Vars::Visuals::Trajectory::DragBasisY, 0.f, 0.1f, 0.01f, "%.2f", FSlider_Precision);
-					FSlider("drag z", Vars::Visuals::Trajectory::DragBasisZ, 0.f, 0.1f, 0.01f, "%.2f", FSlider_Precision);
-					FSlider("ang drag x", Vars::Visuals::Trajectory::AngDragBasisX, 0.f, 0.1f, 0.01f, "%.2f", FSlider_Precision);
-					FSlider("ang drag y", Vars::Visuals::Trajectory::AngDragBasisY, 0.f, 0.1f, 0.01f, "%.2f", FSlider_Precision);
-					FSlider("ang drag z", Vars::Visuals::Trajectory::AngDragBasisZ, 0.f, 0.1f, 0.01f, "%.2f", FSlider_Precision);
-					FSlider("max vel", Vars::Visuals::Trajectory::MaxVelocity, 0.f, 4000.f, 50.f, "%.0f", FSlider_Precision);
-					FSlider("max ang vel", Vars::Visuals::Trajectory::MaxAngularVelocity, 0.f, 7200.f, 50.f, "%.0f", FSlider_Precision);
-				} EndSection();
+			
 			}
 			if (Section("Hitbox"))
 			{
@@ -854,13 +827,7 @@ void CMenu::MenuMisc()
 			FToggle("No push", Vars::Misc::Movement::NoPush, FToggle_Middle);
 			FToggle("Crouch speed", Vars::Misc::Movement::CrouchSpeed);
 		} EndSection();
-		if (Vars::Debug::Info.Value)
-		{
-			if (Section("debug"))
-			{
-				FSlider("timing offset", Vars::Misc::Movement::TimingOffset, -1, 1);
-				FSlider("apply timing offset above", Vars::Misc::Movement::ApplyAbove, 0, 8);
-			} EndSection();
+		
 		}
 		if (Section("Exploits"))
 		{
@@ -873,27 +840,7 @@ void CMenu::MenuMisc()
 			SetCursorPosY(GetCursorPosY() - 8);
 			FToggle("Equip region unlock", Vars::Misc::Exploits::EquipRegionUnlock);
 		} EndSection();
-		if (Vars::Debug::Info.Value)
-		{
-			if (Section("Convar spoofer"))
-			{
-				static std::string sName = "", sValue = "";
-
-				FSDropdown("Convar", &sName, {}, FDropdown_Left);
-				FSDropdown("Value", &sValue, {}, FDropdown_Right);
-				if (FButton("Send"))
-				{
-					if (auto pNetChan = static_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo()))
-					{
-						SDK::Output("Convar", std::format("Sent {} as {}", sName, sValue).c_str(), VecToColor(F::Render.Accent));
-						NET_SetConVar cmd(sName.c_str(), sValue.c_str()); // this doesn't crash, but doesn't do anything either
-						pNetChan->SendNetMsg(cmd);
-
-						//sName = "";
-						//sValue = "";
-					}
-				}
-			} EndSection();
+		
 		}
 		if (Section("Automation"))
 		{
@@ -1035,10 +982,8 @@ void CMenu::MenuSettings()
 			{
 				if (FButton("Configs folder", FButton_Left))
 					ShellExecuteA(NULL, NULL, F::Configs.sConfigPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-				if (FButton("Visuals folder", FButton_Right | FButton_SameLine))
-					ShellExecuteA(NULL, NULL, F::Configs.sVisualsPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
 
-				FTabs({ "GENERAL", "VISUALS", }, &CurrentConfigType, { GetColumnWidth() / 2 + 2, SubTabSize.y }, { 6, GetCursorPos().y }, false);
+				FTabs({ "GENERAL", }, &CurrentConfigType, { GetColumnWidth() / 2 + 2, SubTabSize.y }, { 6, GetCursorPos().y }, false);
 
 				switch (CurrentConfigType)
 				{
@@ -1222,10 +1167,11 @@ void CMenu::MenuSettings()
 			TableNextColumn();
 			if (Section("Debug"))
 			{
-				FToggle("Debug info", Vars::Debug::Info);
+				FToggle("Advanced Mode", Vars::Debug::Info);
 				FToggle("Debug logging", Vars::Debug::Logging, FToggle_Middle);
 				FToggle("Show server hitboxes", Vars::Debug::ServerHitbox); HelpMarker("localhost servers");
 				FToggle("Anti aim lines", Vars::Debug::AntiAimLines, FToggle_Middle);
+				
 			} EndSection();
 			if (Section("Extra"))
 			{
@@ -1276,16 +1222,6 @@ void CMenu::MenuSettings()
 						EndPopup();
 					}
 				}
-				if (Vars::Debug::Info.Value)
-				{
-					if (FButton("Reveal bullet lines", FButton_Left))
-						F::Visuals.RevealBulletLines();
-					if (FButton("Reveal prediction lines", FButton_Right | FButton_SameLine))
-						F::Visuals.RevealSimLines();
-					if (FButton("Reveal boxes", FButton_Left))
-						F::Visuals.RevealBoxes();
-				}
-			} EndSection();
 
 			EndTable();
 		}

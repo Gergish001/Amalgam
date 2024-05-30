@@ -156,9 +156,10 @@ void CMenu::MenuAimbot()
 				FSlider("Fake interp", Vars::Backtrack::Interp, 0, F::Backtrack.flMaxUnlag * 1000, 5, "%d", FSlider_Clamp);
 				FSlider("Window", Vars::Backtrack::Window, 1, 200, 5, "%d", FSlider_Clamp);
 			} EndSection();
+			{
 				if (Section("backtrack")
 				{
-					FSlider("offset", Vars::Backtrack::Offset, -10, 10);
+					FSlider("offset", Vars::Backtrack::Offset, -5, 5);
 				} EndSection();
 			}
 
@@ -189,19 +190,16 @@ void CMenu::MenuAimbot()
 				bTransparent = !FGet(Vars::Aimbot::Projectile::AutoRelease);
 					FSlider("Auto release", Vars::Aimbot::Projectile::AutoRelease, 0.f, 100.f, 5.f, "%.0f%%", FSlider_Clamp | FSlider_Precision);
 				bTransparent = false;
-			} EndSection();
-				if (Section("projectile")
-				{
-					FSlider("ground samples", Vars::Aimbot::Projectile::GroundSamples, 3, 66, 1, "%d", FSlider_Left);
-					FSlider("air samples", Vars::Aimbot::Projectile::AirSamples, 3, 66, 1, "%d", FSlider_Right);
-					FSlider("vertical shift", Vars::Aimbot::Projectile::VerticalShift, 0.f, 20.f, 0.5f, "%.1f", FSlider_Left);
-					FSlider("huntsman lerp", Vars::Aimbot::Projectile::HuntsmanLerp, 0.f, 100.f, 1.f, "%.0f%%", FSlider_Right);
-					FSlider("latency offset", Vars::Aimbot::Projectile::LatencyOffset, -1.f, 1.f, 0.1f, "%.1f", FSlider_Left);
-					FSlider("hull increase", Vars::Aimbot::Projectile::HullIncrease, 0.f, 3.f, 0.5f, "%.1f", FSlider_Right);
-					FSlider("drag override", Vars::Aimbot::Projectile::DragOverride, 0.f, 1.f, 0.001f, "%.3f", FSlider_Left);
-					FSlider("time override", Vars::Aimbot::Projectile::TimeOverride, 0.f, 1.f, 0.001f, "%.3f", FSlider_Right);
-					FSlider("splash points", Vars::Aimbot::Projectile::SplashPoints, 0, 100, 1, "%d", FSlider_Left);
-					FSlider("splash count", Vars::Aimbot::Projectile::SplashCount, 1, 5, 1, "%d", FSlider_Right);
+				FSlider("ground samples", Vars::Aimbot::Projectile::GroundSamples, 3, 66, 1, "%d", FSlider_Left);
+				FSlider("air samples", Vars::Aimbot::Projectile::AirSamples, 3, 66, 1, "%d", FSlider_Right);
+				FSlider("vertical shift", Vars::Aimbot::Projectile::VerticalShift, 0.f, 20.f, 0.5f, "%.1f", FSlider_Left);
+				FSlider("huntsman lerp", Vars::Aimbot::Projectile::HuntsmanLerp, 0.f, 100.f, 1.f, "%.0f%%", FSlider_Right);
+				FSlider("latency offset", Vars::Aimbot::Projectile::LatencyOffset, -1.f, 1.f, 0.1f, "%.1f", FSlider_Left);
+				FSlider("hull increase", Vars::Aimbot::Projectile::HullIncrease, 0.f, 3.f, 0.5f, "%.1f", FSlider_Right);
+				FSlider("drag override", Vars::Aimbot::Projectile::DragOverride, 0.f, 1.f, 0.001f, "%.3f", FSlider_Left);
+				FSlider("time override", Vars::Aimbot::Projectile::TimeOverride, 0.f, 1.f, 0.001f, "%.3f", FSlider_Right);
+				FSlider("splash points", Vars::Aimbot::Projectile::SplashPoints, 0, 100, 1, "%d", FSlider_Left);
+				FSlider("splash count", Vars::Aimbot::Projectile::SplashCount, 1, 5, 1, "%d", FSlider_Right);
 				} EndSection();
 			}
 			if (Section("Melee"))
@@ -210,11 +208,7 @@ void CMenu::MenuAimbot()
 				FToggle("Ignore razorback", Vars::Aimbot::Melee::IgnoreRazorback, FToggle_Middle);
 				FToggle("Swing prediction", Vars::Aimbot::Melee::SwingPrediction);
 				FToggle("Whip teammates", Vars::Aimbot::Melee::WhipTeam, FToggle_Middle);
-			} EndSection();
-		
-			{
-				if (Section("melee")
-					FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 10, 25);
+				FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 10, 14);
 				EndSection();
 			}
 
@@ -852,6 +846,8 @@ void CMenu::MenuMisc()
 			FToggle("No push", Vars::Misc::Movement::NoPush, FToggle_Middle);
 			FToggle("Crouch speed", Vars::Misc::Movement::CrouchSpeed);
 		} EndSection();
+		if (Vars::Debug::Info.Value)
+		{
 			if (Section("debug"))
 			{
 				FSlider("timing offset", Vars::Misc::Movement::TimingOffset, -1, 1);

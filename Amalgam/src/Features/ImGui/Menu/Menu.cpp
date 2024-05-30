@@ -156,11 +156,9 @@ void CMenu::MenuAimbot()
 				FSlider("Fake interp", Vars::Backtrack::Interp, 0, F::Backtrack.flMaxUnlag * 1000, 5, "%d", FSlider_Clamp);
 				FSlider("Window", Vars::Backtrack::Window, 1, 200, 5, "%d", FSlider_Clamp);
 			} EndSection();
-			if (Vars::Debug::Info.Value)
-			{
-				if (Section("debug## backtrack"))
+				if (Section("backtrack")
 				{
-					FSlider("offset", Vars::Backtrack::Offset, -5, 5);
+					FSlider("offset", Vars::Backtrack::Offset, -10, 10);
 				} EndSection();
 			}
 
@@ -192,9 +190,7 @@ void CMenu::MenuAimbot()
 					FSlider("Auto release", Vars::Aimbot::Projectile::AutoRelease, 0.f, 100.f, 5.f, "%.0f%%", FSlider_Clamp | FSlider_Precision);
 				bTransparent = false;
 			} EndSection();
-			if (Vars::Debug::Info.Value)
-			{
-				if (Section("debug## projectile"))
+				if (Section("projectile")
 				{
 					FSlider("ground samples", Vars::Aimbot::Projectile::GroundSamples, 3, 66, 1, "%d", FSlider_Left);
 					FSlider("air samples", Vars::Aimbot::Projectile::AirSamples, 3, 66, 1, "%d", FSlider_Right);
@@ -215,10 +211,10 @@ void CMenu::MenuAimbot()
 				FToggle("Swing prediction", Vars::Aimbot::Melee::SwingPrediction);
 				FToggle("Whip teammates", Vars::Aimbot::Melee::WhipTeam, FToggle_Middle);
 			} EndSection();
-			if (Vars::Debug::Info.Value)
+		
 			{
-				if (Section("debug## melee"))
-					FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 10, 14);
+				if (Section("melee")
+					FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 10, 25);
 				EndSection();
 			}
 
@@ -856,8 +852,6 @@ void CMenu::MenuMisc()
 			FToggle("No push", Vars::Misc::Movement::NoPush, FToggle_Middle);
 			FToggle("Crouch speed", Vars::Misc::Movement::CrouchSpeed);
 		} EndSection();
-		if (Vars::Debug::Info.Value)
-		{
 			if (Section("debug"))
 			{
 				FSlider("timing offset", Vars::Misc::Movement::TimingOffset, -1, 1);

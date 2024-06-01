@@ -1,4 +1,5 @@
 #include "AimbotHitscan.h"
+#include "../../Vars.h"
 #include "../../Backtrack/Backtrack.h"
 #include "../../Resolver/Resolver.h"
 

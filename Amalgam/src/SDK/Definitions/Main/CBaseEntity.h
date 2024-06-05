@@ -1,3 +1,4 @@
+
 #pragma once
 #include "CBaseHandle.h"
 #include "IClientEntity.h"
@@ -64,6 +65,7 @@ public:
 	NETVAR(m_hOwnerEntity, EHANDLE, "CBaseEntity", "m_hOwnerEntity");
 	NETVAR(m_hEffectEntity, EHANDLE, "CBaseEntity", "m_hEffectEntity");
 	NETVAR(moveparent, int, "CBaseEntity", "moveparent");
+	NETVAR(m_hGroundEntity, int, "CBasePlayer", "m_hGroundEntity");
 	NETVAR(m_iParentAttachment, int, "CBaseEntity", "m_iParentAttachment");
 	NETVAR(m_Collision, CCollisionProperty*, "CBaseEntity", "m_Collision");
 	NETVAR(m_vecMinsPreScaled, Vec3, "CBaseEntity", "m_vecMinsPreScaled");
@@ -72,6 +74,7 @@ public:
 	NETVAR(m_vecMaxs, Vec3, "CBaseEntity", "m_vecMaxs");
 	NETVAR(m_nSolidType, int, "CBaseEntity", "m_nSolidType");
 	NETVAR(m_usSolidFlags, int, "CBaseEntity", "m_usSolidFlags");
+	NETVAR(m_nStreaks, void*, "CTFPlayer", "m_nStreaks")
 	NETVAR(m_nSurroundType, int, "CBaseEntity", "m_nSurroundType");
 	NETVAR(m_triggerBloat, int, "CBaseEntity", "m_triggerBloat");
 	NETVAR(m_bUniformTriggerBloat, bool, "CBaseEntity", "m_bUniformTriggerBloat");
@@ -87,11 +90,15 @@ public:
 	NETVAR(m_bAlternateSorting, bool, "CBaseEntity", "m_bAlternateSorting");
 	NETVAR(m_nModelIndexOverrides, void*, "CBaseEntity", "m_nModelIndexOverrides");
 	NETVAR(movetype, int, "CBaseEntity", "movetype");
-	
+	NETVAR(m_lifeState, byte, "CBasePlayer", "m_lifeState");
+	NETVAR(m_fFlags, int, "CBasePlayer", "m_fFlags");
 	NETVAR_OFF(m_flOldSimulationTime, float, "CBaseEntity", "m_flSimulationTime", 4);
-
+	CONDGET(OnGround, m_fFlags(), FL_ONGROUND);
 	VIRTUAL(UpdateVisibility, void, void(__thiscall*)(CBaseEntity*), this, 91);
-
+	__inline bool IsAlive()
+	{
+		return m_lifeState() == LIFE_ALIVE;
+	}
 	Vec3 GetCenter()
 	{
 		return m_vecOrigin() + Vec3(0, 0, (m_vecMins().z + m_vecMaxs().z) / 2);
@@ -123,6 +130,10 @@ public:
 		}
 	}
 
+	__inline bool OnSolid()
+	{
+		return m_hGroundEntity() >= 0;
+	}
 	CBaseEntity* GetMoveParent()
 	{
 		static int nOffset = U::NetVars.GetNetVar("CBaseEntity", "moveparent") - 8;

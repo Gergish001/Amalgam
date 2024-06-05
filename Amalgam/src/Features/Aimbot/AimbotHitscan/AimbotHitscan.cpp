@@ -18,7 +18,7 @@ bool CAimbotHitscan::PlayerBoneInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vL
 		Vec3 vCurAngleTo = Math::CalcAngle(vLocalPos, vCurPos);
 		float flCurFOVTo = Math::CalcFov(vLocalAngles, vCurAngleTo);
 
-		if (flCurFOVTo < flMinFOV && flCurFOVTo < Vars::Aimbot::General::AimFOV.Value)
+		if (flCurFOVTo < Vars::Aimbot::General::AimFOV.Value)
 		{
 			bReturn = true;
 			vPos = vCurPos;
@@ -680,11 +680,6 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 
 	switch (nWeaponID)
 	{
-	case TF_WEAPON_MINIGUN:
-		pCmd->buttons |= IN_ATTACK2;
-		if (pWeapon->As<CTFMinigun>()->m_iWeaponState() != AC_STATE_FIRING && pWeapon->As<CTFMinigun>()->m_iWeaponState() != AC_STATE_SPINNING)
-			return;
-		break;
 	case TF_WEAPON_SNIPERRIFLE:
 	case TF_WEAPON_SNIPERRIFLE_DECAP:
 	{

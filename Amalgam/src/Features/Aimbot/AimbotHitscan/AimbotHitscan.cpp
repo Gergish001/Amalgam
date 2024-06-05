@@ -1,889 +1,786 @@
 #include "AimbotHitscan.h"
-#include "../../Vars.h"
+
 #include "../../Backtrack/Backtrack.h"
 #include "../../Resolver/Resolver.h"
+#include "../../Visuals/Visuals.h"
 
-bool IsHitboxValid(int nHitbox, int index, bool bStatic = false)
+bool CAimbotHitscan::PlayerBoneInFOV(CTFPlayer* pTarget, Vec3 vLocalPos, Vec3 vLocalAngles, float& flFOVTo, Vec3& vPos, Vec3& vAngleTo) // this won't prevent shooting bones outside of fov
 {
-	const int iStatic = Vars::Aimbot::Hitscan::StaticHitboxes.Value;
-	switch (nHitbox)
-	{
-		case -1: return true;
-		case HITBOX_HEAD: return (index & (1 << 0) && !(!bStatic && iStatic & (1 << 0)));
-		case HITBOX_PELVIS: return (index & (1 << 1) && !(!bStatic && iStatic & (1 << 1)));
-		case HITBOX_SPINE_0:
-		case HITBOX_SPINE_1:
-		case HITBOX_SPINE_2:
-		case HITBOX_SPINE_3: return (index & (1 << 2) && !(!bStatic && iStatic & (1 << 2)));
-		case HITBOX_UPPERARM_L:
-		case HITBOX_LOWERARM_L:
-		case HITBOX_HAND_L:
-		case HITBOX_UPPERARM_R:
-		case HITBOX_LOWERARM_R:
-		case HITBOX_HAND_R: return (index & (1 << 3) && !(!bStatic && iStatic & (1 << 3)));
-		case HITBOX_HIP_L:
-		case HITBOX_KNEE_L:
-		case HITBOX_FOOT_L:
-		case HITBOX_HIP_R:
-		case HITBOX_KNEE_R:
-		case HITBOX_FOOT_R: return (index & (1 << 4) && !(!bStatic && iStatic & (1 << 4)));
-	}
-	return false;
-};
+	bool bReturn = false;
 
-int CAimbotHitscan::GetHitbox(CBaseEntity* pLocal, CBaseCombatWeapon* pWeapon)
-{
-	switch (Vars::Aimbot::Hitscan::AimHitbox.Value)
+	float flMinFOV = 180.f;
+	for (int nHitbox = 0; nHitbox < pTarget->GetNumOfHitboxes(); nHitbox++)
 	{
-		case 0: { return HITBOX_HEAD; }
-		case 1: { return HITBOX_SPINE_1; }
-		case 2:
+		if (!IsHitboxValid(nHitbox))
+			continue;
+
+		Vec3 vCurPos = pTarget->GetHitboxPos(nHitbox);
+		Vec3 vCurAngleTo = Math::CalcAngle(vLocalPos, vCurPos);
+		float flCurFOVTo = Math::CalcFov(vLocalAngles, vCurAngleTo);
+
+		if (flCurFOVTo < flMinFOV && flCurFOVTo < Vars::Aimbot::General::AimFOV.Value)
 		{
-			const int nClassNum = pLocal->GetClassNum();
-
-			if (nClassNum == CLASS_SNIPER)
-			{
-				if (G::CurItemDefIndex != Sniper_m_TheSydneySleeper)
-				{
-					return (pLocal->IsScoped() ? HITBOX_HEAD : HITBOX_SPINE_1);
-				}
-
-				return HITBOX_SPINE_1;
-			}
-			if (nClassNum == CLASS_SPY)
-			{
-				const bool bIsAmbassador = (G::CurItemDefIndex == Spy_m_TheAmbassador || G::
-											CurItemDefIndex == Spy_m_FestiveAmbassador);
-				return (bIsAmbassador ? HITBOX_HEAD : HITBOX_SPINE_1);
-			}
-			return HITBOX_SPINE_1;
+			bReturn = true;
+			vPos = vCurPos;
+			vAngleTo = vCurAngleTo;
+			flFOVTo = flMinFOV = flCurFOVTo;
 		}
 	}
 
-	return HITBOX_HEAD;
+	return bReturn;
 }
 
-/* Returns the target group of the current weapon */
-EGroupType CAimbotHitscan::GetGroupType(CBaseCombatWeapon* pWeapon)
-{
-	if (pWeapon->GetWeaponID() == TF_WEAPON_MEDIGUN)
-	{
-		return EGroupType::PLAYERS_TEAMMATES;
-	}
-
-	const bool hasPissRifle = (G::CurItemDefIndex == Sniper_m_TheSydneySleeper);
-	if (SandvichAimbot::bIsSandvich || hasPissRifle)
-	{
-		return EGroupType::PLAYERS_ALL;
-	}
-
-	return EGroupType::PLAYERS_ENEMIES;
-}
-
-/* Returns all valid targets */
-std::vector<Target_t> CAimbotHitscan::GetTargets(CBaseEntity* pLocal, CBaseCombatWeapon* pWeapon)
+std::vector<Target_t> CAimbotHitscan::GetTargets(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
 	std::vector<Target_t> validTargets;
-	const auto sortMethod = static_cast<ESortMethod>(Vars::Aimbot::Hitscan::SortMethod.Value);
+	const auto sortMethod = static_cast<ESortMethod>(Vars::Aimbot::General::TargetSelection.Value);
 
 	const Vec3 vLocalPos = pLocal->GetShootPos();
 	const Vec3 vLocalAngles = I::EngineClient->GetViewAngles();
 
-	// Players
-	if (Vars::Aimbot::Global::AimAt.Value & (ToAimAt::PLAYER))
-	{
-		int nHitbox = GetHitbox(pLocal, pWeapon);
-		const bool bIsMedigun = pWeapon->GetWeaponID() == TF_WEAPON_MEDIGUN;
-		const bool hasPissRifle = G::CurItemDefIndex == Sniper_m_TheSydneySleeper;
-		const auto groupType = GetGroupType(pWeapon);
+	const bool bIsMedigun = pWeapon->m_iWeaponID() == TF_WEAPON_MEDIGUN;
 
-		for (const auto& pTarget : g_EntityCache.GetGroup(groupType))
+	if (Vars::Aimbot::General::Target.Value & PLAYER)
+	{
+		const bool bPissRifle = G::WeaponDefIndex == Sniper_m_TheSydneySleeper;
+
+		EGroupType groupType = EGroupType::PLAYERS_ENEMIES;
+		if (bIsMedigun)
+			groupType = EGroupType::PLAYERS_TEAMMATES;
+		else if (bPissRifle)
+			groupType = EGroupType::PLAYERS_ALL;
+
+		for (auto pEntity : H::Entities.GetGroup(groupType))
 		{
-			// Is the target valid and alive?
-			if (!pTarget->IsAlive() || pTarget->IsAGhost() || pTarget == pLocal)
-			{
+			auto pPlayer = pEntity->As<CTFPlayer>();
+			if (pPlayer == pLocal || !pPlayer->IsAlive() || pPlayer->IsAGhost())
 				continue;
-			}
 
 			// Can we extinguish a teammate using the piss rifle?
-			if (hasPissRifle && (pTarget->GetTeamNum() == pLocal->GetTeamNum()))
+			if (bPissRifle && (pPlayer->m_iTeamNum() == pLocal->m_iTeamNum()))
 			{
-				if (!Vars::Aimbot::Hitscan::ExtinguishTeam.Value || !pTarget->IsOnFire())
-				{
+				if (!(Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 6)) || !pPlayer->IsOnFire())
 					continue;
-				}
 			}
 
-			// Can the medigun reach the target?
-			if (bIsMedigun && (pLocal->GetWorldSpaceCenter().DistTo(pTarget->GetWorldSpaceCenter()) > 472.f))
-			{
+			if (F::AimbotGlobal.ShouldIgnore(pPlayer, pLocal, pWeapon, bIsMedigun))
 				continue;
-			}
 
-			// Should we ignore the target?
-			if (F::AimbotGlobal.ShouldIgnore(pTarget, bIsMedigun))
-			{
+			float flFOVTo; Vec3 vPos, vAngleTo;
+			if (!PlayerBoneInFOV(pPlayer, vLocalPos, vLocalAngles, flFOVTo, vPos, vAngleTo))
 				continue;
-			}
 
-			// Should we Baim if it would be lethal?
-			if (Vars::Aimbot::Global::BAimLethal.Value)
-			{
-				if (pWeapon->GetChargeDamage() >= pTarget->GetHealth())
-				{
-					nHitbox = HITBOX_SPINE_1;
-				}
-
-				if (G::CurItemDefIndex == Spy_m_TheAmbassador || G::CurItemDefIndex ==
-					Spy_m_FestiveAmbassador)
-				{
-					// This doesn't work
-					/*if (pWeapon->GetWeaponData().m_nDamage >= Player->GetHealth())
-					{
-						nHitbox = HITBOX_PELVIS;
-					}*/
-					// Min damage is 18, max damage is 51 (non headshot)
-					const float flDistTo = pTarget->GetAbsOrigin().DistTo(pLocal->GetAbsOrigin());
-					const int nAmbassadorBodyshotDamage = Math::RemapValClamped(flDistTo, 90, 900, 51, 18);
-
-					if (pTarget->GetHealth() < (nAmbassadorBodyshotDamage + 2)) // whatever
-					{
-						nHitbox = HITBOX_SPINE_1;
-					}
-				}
-			}
-
-			PriorityHitbox = nHitbox;
-
-			Vec3 vPos = pTarget->GetHitboxPos(nHitbox);
-			Vec3 vAngleTo = Math::CalcAngle(vLocalPos, vPos);
-			const float flFOVTo = Math::CalcFov(vLocalAngles, vAngleTo);
-
-			if (flFOVTo > Vars::Aimbot::Hitscan::AimFOV.Value)
-			{
-				continue;
-			}
-
-			// Get the target priority
-			const auto& priority = F::AimbotGlobal.GetPriority(pTarget->GetIndex());
-
-			// The target is valid! Add it to the target vector.
 			const float flDistTo = vLocalPos.DistTo(vPos);
-			validTargets.push_back({
-				pTarget, ETargetType::PLAYER, vPos, vAngleTo, flFOVTo, flDistTo, nHitbox, false, priority
-								   });
+			const int priority = F::AimbotGlobal.GetPriority(pPlayer->entindex());
+			validTargets.push_back({ pPlayer, ETargetType::PLAYER, vPos, vAngleTo, flFOVTo, flDistTo, priority });
 		}
 	}
 
-	// Buildings
-	if (Vars::Aimbot::Global::AimAt.Value)
+	if (bIsMedigun) // do not attempt to heal buildings or other
+		return validTargets;
+
+	if (Vars::Aimbot::General::Target.Value)
 	{
-		for (const auto& pBuilding : g_EntityCache.GetGroup(EGroupType::BUILDINGS_ENEMIES))
+		for (auto pEntity : H::Entities.GetGroup(EGroupType::BUILDINGS_ENEMIES))
 		{
-			bool isSentry = pBuilding->GetClassID() == ETFClassID::CObjectSentrygun;
-			bool isDispenser = pBuilding->GetClassID() == ETFClassID::CObjectDispenser;
-			bool isTeleporter = pBuilding->GetClassID() == ETFClassID::CObjectTeleporter;
+			auto pBuilding = pEntity->As<CBaseObject>();
 
-			if (!(Vars::Aimbot::Global::AimAt.Value & (ToAimAt::SENTRY)) && isSentry) { continue; }
-			if (!(Vars::Aimbot::Global::AimAt.Value & (ToAimAt::DISPENSER)) && isDispenser) { continue; }
-			if (!(Vars::Aimbot::Global::AimAt.Value & (ToAimAt::TELEPORTER)) && isTeleporter) { continue; }
+			bool isSentry = pBuilding->IsSentrygun(), isDispenser = pBuilding->IsDispenser(), isTeleporter = pBuilding->IsTeleporter();
 
-			// Is the building valid and alive?
-			if (!pBuilding || !pBuilding->IsAlive()) { continue; }
+			if (!(Vars::Aimbot::General::Target.Value & SENTRY) && isSentry)
+				continue;
+			if (!(Vars::Aimbot::General::Target.Value & DISPENSER) && isDispenser)
+				continue;
+			if (!(Vars::Aimbot::General::Target.Value & TELEPORTER) && isTeleporter)
+				continue;
 
-			Vec3 vPos = pBuilding->GetWorldSpaceCenter();
+			Vec3 vPos = pBuilding->GetCenter();
 			Vec3 vAngleTo = Math::CalcAngle(vLocalPos, vPos);
 			const float flFOVTo = Math::CalcFov(vLocalAngles, vAngleTo);
 
-			if (flFOVTo > Vars::Aimbot::Hitscan::AimFOV.Value)
-			{
+			if (flFOVTo > Vars::Aimbot::General::AimFOV.Value)
 				continue;
-			}
 
-			// The target is valid! Add it to the target vector.
 			const float flDistTo = vLocalPos.DistTo(vPos);
-			validTargets.push_back({ pBuilding, isSentry ? ETargetType::SENTRY : (isDispenser ? ETargetType::DISPENSER : ETargetType::TELEPORTER), vPos, vAngleTo, flFOVTo, flDistTo});
+			validTargets.push_back({ pBuilding, isSentry ? ETargetType::SENTRY : (isDispenser ? ETargetType::DISPENSER : ETargetType::TELEPORTER), vPos, vAngleTo, flFOVTo, flDistTo });
 		}
 	}
 
-	// Stickies
-	if (Vars::Aimbot::Global::AimAt.Value & (ToAimAt::STICKY))
+	if (Vars::Aimbot::General::Target.Value & STICKY)
 	{
-		for (const auto& pProjectile : g_EntityCache.GetGroup(EGroupType::WORLD_PROJECTILES))
+		for (auto pEntity : H::Entities.GetGroup(EGroupType::WORLD_PROJECTILES))
 		{
-			// Is the projectile a sticky?
-			if (!(pProjectile->GetPipebombType() == TYPE_STICKY))
-			{
+			if (pEntity->GetClassID() != ETFClassID::CTFGrenadePipebombProjectile)
 				continue;
-			}
 
-			const auto& pOwner = I::ClientEntityList->GetClientEntityFromHandle(reinterpret_cast<int>(pProjectile->GetThrower()));
-			if (!pOwner) { continue; }
-
-			if ((!pProjectile->GetTouched()) || (pOwner->GetTeamNum() == pLocal->GetTeamNum()))
-			{
+			auto pProjectile = pEntity->As<CTFGrenadePipebombProjectile>();
+			if (pProjectile->m_iType() != TF_GL_MODE_REMOTE_DETONATE || !pProjectile->m_bTouched())
 				continue;
-			}
 
-			Vec3 vPos = pProjectile->GetWorldSpaceCenter();
+			auto pOwner = pProjectile->m_hThrower().Get();
+			if (!pOwner || pOwner->m_iTeamNum() == pLocal->m_iTeamNum())
+				continue;
+
+			Vec3 vPos = pProjectile->GetCenter();
 			Vec3 vAngleTo = Math::CalcAngle(vLocalPos, vPos);
 			const float flFOVTo = Math::CalcFov(vLocalAngles, vAngleTo);
 
-			if (flFOVTo > Vars::Aimbot::Hitscan::AimFOV.Value)
-			{
+			if (flFOVTo > Vars::Aimbot::General::AimFOV.Value)
 				continue;
-			}
 
-			// The target is valid! Add it to the target vector.
 			const float flDistTo = vLocalPos.DistTo(vPos);
 			validTargets.push_back({ pProjectile, ETargetType::STICKY, vPos, vAngleTo, flFOVTo, flDistTo });
 		}
 	}
 
-	// NPCs
-	if (Vars::Aimbot::Global::AimAt.Value & (ToAimAt::NPC))
+	if (Vars::Aimbot::General::Target.Value & NPC)
 	{
-		for (const auto& pNPC : g_EntityCache.GetGroup(EGroupType::WORLD_NPC))
+		for (auto pNPC : H::Entities.GetGroup(EGroupType::WORLD_NPC))
 		{
-			Vec3 vPos = pNPC->GetWorldSpaceCenter();
+			Vec3 vPos = pNPC->GetCenter();
 			Vec3 vAngleTo = Math::CalcAngle(vLocalPos, vPos);
 			const float flFOVTo = Math::CalcFov(vLocalAngles, vAngleTo);
 
-			if (flFOVTo > Vars::Aimbot::Hitscan::AimFOV.Value)
-			{
+			if (flFOVTo > Vars::Aimbot::General::AimFOV.Value)
 				continue;
-			}
 
-			// The target is valid! Add it to the target vector.
 			const float flDistTo = vLocalPos.DistTo(vPos);
 			validTargets.push_back({ pNPC, ETargetType::NPC, vPos, vAngleTo, flFOVTo, flDistTo });
 		}
 	}
 
-	//Bombs
-	if (Vars::Aimbot::Global::AimAt.Value & (ToAimAt::BOMB))
+	if (Vars::Aimbot::General::Target.Value & BOMB)
 	{
-		//TODO: Check if player is close enough to bomb to damage
-		for (const auto& pBomb : g_EntityCache.GetGroup(EGroupType::WORLD_BOMBS))
+		for (auto pBomb : H::Entities.GetGroup(EGroupType::WORLD_BOMBS))
 		{
-			Vec3 vPos = pBomb->GetWorldSpaceCenter();
+			Vec3 vPos = pBomb->GetCenter();
 			Vec3 vAngleTo = Math::CalcAngle(vLocalPos, vPos);
 
 			const float flFOVTo = Math::CalcFov(vLocalAngles, vAngleTo);
 			const float flDistTo = sortMethod == ESortMethod::DISTANCE ? vLocalPos.DistTo(vPos) : 0.0f;
 
-			if (flFOVTo > Vars::Aimbot::Hitscan::AimFOV.Value)
-			{
+			if (flFOVTo > Vars::Aimbot::General::AimFOV.Value)
 				continue;
-			}
 
-			// The target is valid! Add it to the target vector.
+			if (!F::AimbotGlobal.ValidBomb(pLocal, pWeapon, pBomb))
+				continue;
+
 			validTargets.push_back({ pBomb, ETargetType::BOMBS, vPos, vAngleTo, flFOVTo, flDistTo });
 		}
 	}
 
-	// Did we find at least one target?
 	return validTargets;
 }
 
-bool CAimbotHitscan::ScanHitboxes(CBaseEntity* pLocal, Target_t& target)
+std::vector<Target_t> CAimbotHitscan::SortTargets(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	const Vec3 vLocalPos = pLocal->GetShootPos();
+	auto validTargets = GetTargets(pLocal, pWeapon);
 
-	if (target.m_TargetType == ETargetType::PLAYER)
+	const auto& sortMethod = static_cast<ESortMethod>(Vars::Aimbot::General::TargetSelection.Value);
+	F::AimbotGlobal.SortTargets(&validTargets, sortMethod);
+
+	std::vector<Target_t> sortedTargets = {};
+	int i = 0; for (auto& target : validTargets)
 	{
-		if (Vars::Aimbot::Hitscan::ScanHitboxes.Value == 0) // even if they have multibox stuff on, if they are scanning nothing we return false, frick you.
+		i++; if (i > Vars::Aimbot::General::MaxTargets.Value) break;
+
+		sortedTargets.push_back(target);
+	}
+
+	F::AimbotGlobal.SortPriority(&sortedTargets);
+
+	return sortedTargets;
+}
+
+
+
+bool CAimbotHitscan::IsHitboxValid(int nHitbox) // check that this & all other uses are right
+{
+	const int iHitboxes = Vars::Aimbot::Hitscan::Hitboxes.Value;
+	switch (nHitbox)
+	{
+	case -1: return true;
+	case HITBOX_HEAD: return iHitboxes & (1 << 0);
+	case HITBOX_NECK: return iHitboxes & (1 << 1);
+	case HITBOX_LOWER_NECK:
+	case HITBOX_PELVIS:
+	case HITBOX_BODY:
+	case HITBOX_THORAX: return iHitboxes & (1 << 2);
+	case HITBOX_CHEST:
+	case HITBOX_UPPER_CHEST:
+	case HITBOX_RIGHT_THIGH:
+	case HITBOX_LEFT_THIGH:
+	case HITBOX_RIGHT_CALF:
+	case HITBOX_LEFT_CALF: return iHitboxes & (1 << 3);
+	case HITBOX_RIGHT_FOOT:
+	case HITBOX_LEFT_FOOT:
+	case HITBOX_RIGHT_HAND:
+	case HITBOX_LEFT_HAND:
+	case HITBOX_RIGHT_UPPER_ARM:
+	case HITBOX_RIGHT_FOREARM:
+	case HITBOX_LEFT_UPPER_ARM:
+	case HITBOX_LEFT_FOREARM: return iHitboxes & (1 << 4);
+	}
+
+	return false;
+}
+
+int CAimbotHitscan::GetHitboxPriority(int nHitbox, CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CBaseEntity* pTarget)
+{
+	bool bHeadshot = false;
+	{
+		const int nClassNum = pLocal->m_iClass();
+
+		if (nClassNum == TF_CLASS_SNIPER)
 		{
-			return false;
+			if (G::WeaponDefIndex != Sniper_m_TheClassic && pLocal->IsScoped() ||
+				G::WeaponDefIndex == Sniper_m_TheClassic && pWeapon->As<CTFSniperRifle>()->m_flChargedDamage() > 149.9f)
+				bHeadshot = true;
+		}
+		if (nClassNum == TF_CLASS_SPY)
+		{
+			if ((G::WeaponDefIndex == Spy_m_TheAmbassador || G::WeaponDefIndex == Spy_m_FestiveAmbassador) && pWeapon->AmbassadorCanHeadshot())
+				bHeadshot = true;
 		}
 
-		matrix3x4 boneMatrix[128];
-		if (const model_t* pModel = target.m_pEntity->GetModel())
+		if (Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 5) && bHeadshot && pTarget->IsPlayer())
 		{
-			if (const studiohdr_t* pHDR = I::ModelInfoClient->GetStudioModel(pModel))
 			{
-				if (target.m_pEntity->SetupBones(boneMatrix, 128, 0x100, I::GlobalVars->curtime))
+				float flBodyMult = 1.f;
+				switch (G::WeaponDefIndex)
 				{
-					if (const mstudiohitboxset_t* pSet = pHDR->GetHitboxSet(target.m_pEntity->GetHitboxSet()))
+				case Sniper_m_TheClassic: flBodyMult = 0.9f; break;
+				case Sniper_m_TheHitmansHeatmaker: flBodyMult = 0.8f; break;
+				case Sniper_m_TheMachina:
+				case Sniper_m_ShootingStar: if (pWeapon->As<CTFSniperRifle>()->m_flChargedDamage() > 149.9f) flBodyMult = 1.15f;
+				}
+				if (pWeapon->As<CTFSniperRifle>()->m_flChargedDamage() * flBodyMult >= pTarget->As<CTFPlayer>()->m_iHealth())
+					bHeadshot = false;
+			}
+
+			if (G::WeaponDefIndex == Spy_m_TheAmbassador || G::WeaponDefIndex == Spy_m_FestiveAmbassador)
+			{
+				const float flDistTo = pTarget->m_vecOrigin().DistTo(pLocal->m_vecOrigin());
+				const int nAmbassadorBodyshotDamage = Math::RemapValClamped(flDistTo, 90, 900, 51, 18);
+
+				if (pTarget->As<CTFPlayer>()->m_iHealth() < (nAmbassadorBodyshotDamage + 2)) // whatever
+					bHeadshot = false;
+			}
+		}
+	}
+
+	switch (nHitbox)
+	{
+	case -1: return 2;
+	case HITBOX_HEAD: return bHeadshot ? 0 : 2;
+	case HITBOX_NECK: return 2;
+	case HITBOX_LOWER_NECK:
+	case HITBOX_PELVIS:
+	case HITBOX_BODY:
+	case HITBOX_THORAX: return bHeadshot ? 1 : 0;
+	case HITBOX_CHEST:
+	case HITBOX_UPPER_CHEST:
+	case HITBOX_RIGHT_THIGH:
+	case HITBOX_LEFT_THIGH:
+	case HITBOX_RIGHT_CALF:
+	case HITBOX_LEFT_CALF: return 2;
+	case HITBOX_RIGHT_FOOT:
+	case HITBOX_LEFT_FOOT:
+	case HITBOX_RIGHT_HAND:
+	case HITBOX_LEFT_HAND:
+	case HITBOX_RIGHT_UPPER_ARM:
+	case HITBOX_RIGHT_FOREARM:
+	case HITBOX_LEFT_UPPER_ARM:
+	case HITBOX_LEFT_FOREARM: return 2;
+	}
+
+	return 2;
+};
+
+float CAimbotHitscan::GetMaxRange(CTFWeaponBase* pWeapon)
+{
+	switch (pWeapon->m_iWeaponID())
+	{
+	case TF_WEAPON_MEDIGUN: return 450.f;
+	case TF_WEAPON_MECHANICAL_ARM: return 256.f;
+	}
+
+	auto tfWeaponInfo = pWeapon->GetWeaponInfo();
+	return tfWeaponInfo ? tfWeaponInfo->GetWeaponData(0).m_flRange : 8192.f;
+}
+
+int CAimbotHitscan::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
+{
+	if (Vars::Aimbot::General::Ignore.Value & UNSIMULATED && G::ChokeMap[target.m_pEntity->entindex()] > Vars::Aimbot::General::TickTolerance.Value)
+		return false;
+
+	Vec3 vEyePos = pLocal->GetShootPos();
+	const float flMaxRange = powf(GetMaxRange(pWeapon), 2.f);
+
+	auto pModel = target.m_pEntity->GetModel();
+	if (!pModel) return false;
+	auto pHDR = I::ModelInfoClient->GetStudiomodel(pModel);
+	if (!pHDR) return false;
+	auto pSet = pHDR->pHitboxSet(target.m_pEntity->As<CBaseAnimating>()->m_nHitboxSet());
+	if (!pSet) return false;
+
+	std::deque<TickRecord> vRecords;
+	{
+		auto pRecords = F::Backtrack.GetRecords(target.m_pEntity);
+		if (pRecords && target.m_TargetType == ETargetType::PLAYER)
+		{
+			vRecords = F::Backtrack.GetValidRecords(pRecords, pLocal);
+			if (!Vars::Backtrack::Enabled.Value && !vRecords.empty())
+				vRecords = { vRecords.front() };
+		}
+		else
+		{
+			matrix3x4 bones[128];
+			if (!target.m_pEntity->SetupBones(bones, 128, BONE_USED_BY_ANYTHING, target.m_pEntity->m_flSimulationTime()))
+				return false;
+
+			vRecords.push_front({
+				target.m_pEntity->m_flSimulationTime(),
+				I::GlobalVars->curtime,
+				I::GlobalVars->tickcount,
+				false,
+				*reinterpret_cast<BoneMatrixes*>(&bones),
+				target.m_pEntity->m_vecOrigin()
+			});
+		}
+	}
+
+	auto RayToOBB = [](const Vec3& origin, const Vec3& direction, const Vec3& position, const Vec3& min, const Vec3& max, const matrix3x4 orientation) -> bool
+		{
+			if (Vars::Aimbot::General::AimType.Value != 2)
+				return true;
+
+			return Math::RayToOBB(origin, direction, position, min, max, orientation);
+		};
+
+	int iReturn = false;
+	for (auto& pTick : vRecords)
+	{
+		if (target.m_TargetType == ETargetType::PLAYER || target.m_TargetType == ETargetType::SENTRY)
+		{
+			auto boneMatrix = (matrix3x4*)(&pTick.BoneMatrix.BoneMatrix);
+			if (!boneMatrix)
+				continue;
+
+			std::vector<std::pair<const mstudiobbox_t*, int>> hitboxes;
+			{
+				if (target.m_TargetType != ETargetType::SENTRY)
+				{
+					std::vector<std::pair<const mstudiobbox_t*, int>> primary, secondary, tertiary; // dumb
+					for (int nHitbox = 0; nHitbox < target.m_pEntity->As<CTFPlayer>()->GetNumOfHitboxes(); nHitbox++)
 					{
-						for (int nHitbox = -1; nHitbox < target.m_pEntity->GetNumOfHitboxes(); nHitbox++)
+						if (!IsHitboxValid(nHitbox))
+							continue;
+
+						auto pBox = pSet->pHitbox(nHitbox);
+						if (!pBox) continue;
+
+						switch (GetHitboxPriority(nHitbox, pLocal, pWeapon, target.m_pEntity))
 						{
-							if (!IsHitboxValid(nHitbox, Vars::Aimbot::Hitscan::ScanHitboxes.Value, (target.m_pEntity->GetVelocity().Length() < 10.f))) { continue; }
-							if (nHitbox == -1) { nHitbox = PriorityHitbox; }
-							else if (nHitbox == PriorityHitbox) { continue; }
-
-
-							Vec3 vHitbox = target.m_pEntity->GetHitboxPos(nHitbox);
-
-							if (nHitbox == 0 ? Utils::VisPosHitboxId(pLocal, target.m_pEntity, vLocalPos, vHitbox, nHitbox) : Utils::VisPos(pLocal, target.m_pEntity, vLocalPos, vHitbox))
-							// properly check if we hit the hitbox we were scanning and not just a hitbox. (only if the hitbox we are scanning is head)
-							{
-								target.m_vPos = vHitbox;
-								target.m_nAimedHitbox = nHitbox;
-								target.m_vAngleTo = Math::CalcAngle(vLocalPos, vHitbox);
-								return true;
-							}
-
-							if (IsHitboxValid(nHitbox, Vars::Aimbot::Hitscan::MultiHitboxes.Value, (target.m_pEntity->GetVelocity().Length() < 10.f)))
-							{
-								if (const mstudiobbox_t* pBox = pSet->hitbox(nHitbox))
-								{
-									const float fScale = Vars::Aimbot::Hitscan::PointScale.Value;
-									const Vec3 vMins = pBox->bbmin * fScale;
-									const Vec3 vMaxs = pBox->bbmax * fScale;
-
-									const std::vector<Vec3> vecPoints = {
-										Vec3(vMaxs.x, vMaxs.y, vMins.z),
-										Vec3(vMaxs.x, vMins.y, vMins.z),
-										Vec3(vMins.x, vMaxs.y, vMins.z),
-										Vec3(vMins.x, vMins.y, vMins.z),
-										Vec3(vMins.x, vMins.y, vMaxs.z),
-										Vec3(vMins.x, vMaxs.y, vMaxs.z),
-										Vec3(vMaxs.x, vMaxs.y, vMaxs.z),
-										Vec3(vMins.x, vMins.y, vMaxs.z),
-									};
-
-									for (const auto& point : vecPoints)
-									{
-										Vec3 vTransformed = {};
-										Math::VectorTransform(point, boneMatrix[pBox->bone], vTransformed);
-
-										if (nHitbox == 0
-											? Utils::VisPosHitboxId(pLocal, target.m_pEntity, vLocalPos, vTransformed, nHitbox)
-											: Utils::VisPos(pLocal, target.m_pEntity, vLocalPos, vHitbox))
-									// there is no need to scan multiple times just because we hit the arm or whatever. Only count as failure if this hitbox was head.
-										{
-											target.m_vPos = vTransformed;
-											target.m_nAimedHitbox = nHitbox;
-											target.m_vAngleTo = Math::CalcAngle(vLocalPos, vTransformed);
-											target.m_bHasMultiPointed = true;
-											return true;
-										}
-									}
-								}
-							}
+						case 0: primary.push_back({ pBox, nHitbox }); break;
+						case 1: secondary.push_back({ pBox, nHitbox }); break;
+						case 2: tertiary.push_back({ pBox, nHitbox }); break;
 						}
 					}
+					for (auto& pair : primary) hitboxes.push_back(pair);
+					for (auto& pair : secondary) hitboxes.push_back(pair);
+					for (auto& pair : tertiary) hitboxes.push_back(pair);
+				}
+				else
+				{
+					for (int nHitbox = 0; nHitbox < target.m_pEntity->As<CObjectSentrygun>()->GetNumOfHitboxes(); nHitbox++)
+					{
+						const mstudiobbox_t* pBox = pSet->pHitbox(nHitbox);
+						if (!pBox) continue;
+
+						hitboxes.push_back({ pBox, nHitbox });
+					}
+					std::sort(hitboxes.begin(), hitboxes.end(), [&](const auto& a, const auto& b) -> bool
+						{
+							Vec3 aCenter = {}, bCenter = {}, vCenter = target.m_pEntity->GetCenter();
+							Math::VectorTransform({}, boneMatrix[a.first->bone], aCenter);
+							Math::VectorTransform({}, boneMatrix[b.first->bone], bCenter);
+
+							return vCenter.DistTo(aCenter) < vCenter.DistTo(bCenter);
+						});
 				}
 			}
-		}
-	}
 
-	else if (target.m_TargetType == ETargetType::SENTRY || target.m_TargetType == ETargetType::DISPENSER || target.m_TargetType == ETargetType::TELEPORTER)
-	{
-		for (int nHitbox = 0; nHitbox < target.m_pEntity->GetNumOfHitboxes(); nHitbox++)
-		{
-			Vec3 vHitbox = target.m_pEntity->GetHitboxPos(nHitbox);
-
-			if (Utils::VisPos(pLocal, target.m_pEntity, vLocalPos, vHitbox))
+			for (auto& pair : hitboxes)
 			{
-				target.m_vPos = vHitbox;
-				target.m_vAngleTo = Math::CalcAngle(vLocalPos, vHitbox);
-				return true;
-			}
-		}
-	}
+				const float flScale = Vars::Aimbot::Hitscan::PointScale.Value / 100;
+				const Vec3 vMins = pair.first->bbmin, vMinsS = vMins * flScale;
+				const Vec3 vMaxs = pair.first->bbmax, vMaxsS = vMaxs * flScale;
 
-	return false;
-}
-
-bool CAimbotHitscan::ScanBuildings(CBaseEntity* pLocal, Target_t& target)
-{
-	if (!Vars::Aimbot::Hitscan::ScanBuildings.Value)
-	{
-		return false;
-	}
-
-	const Vec3 vLocalPos = pLocal->GetShootPos();
-
-	const float pointScale = Vars::Aimbot::Hitscan::PointScale.Value;
-
-	const Vec3 vMins = target.m_pEntity->GetCollideableMins() * pointScale;
-	const Vec3 vMaxs = target.m_pEntity->GetCollideableMaxs() * pointScale;
-
-	const std::vector<Vec3> vecPoints = {
-		Vec3(vMins.x * 0.9f, ((vMins.y + vMaxs.y) * 0.5f), ((vMins.z + vMaxs.z) * 0.5f)),
-		Vec3(vMaxs.x * 0.9f, ((vMins.y + vMaxs.y) * 0.5f), ((vMins.z + vMaxs.z) * 0.5f)),
-		Vec3(((vMins.x + vMaxs.x) * 0.5f), vMins.y * 0.9f, ((vMins.z + vMaxs.z) * 0.5f)),
-		Vec3(((vMins.x + vMaxs.x) * 0.5f), vMaxs.y * 0.9f, ((vMins.z + vMaxs.z) * 0.5f)),
-		Vec3(((vMins.x + vMaxs.x) * 0.5f), ((vMins.y + vMaxs.y) * 0.5f), vMins.z * 0.9f),
-		Vec3(((vMins.x + vMaxs.x) * 0.5f), ((vMins.y + vMaxs.y) * 0.5f), vMaxs.z * 0.9f)
-	};
-
-	const matrix3x4& transform = target.m_pEntity->GetRgflCoordinateFrame();
-
-	for (const auto& point : vecPoints)
-	{
-		Vec3 vTransformed = {};
-		Math::VectorTransform(point, transform, vTransformed);
-
-		if (Utils::VisPos(pLocal, target.m_pEntity, vLocalPos, vTransformed))
-		{
-			target.m_vPos = vTransformed;
-			target.m_vAngleTo = Math::CalcAngle(vLocalPos, vTransformed);
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool CAimbotHitscan::VerifyTarget(CBaseEntity* pLocal, Target_t& target)
-{
-	switch (target.m_TargetType)
-	{
-		case ETargetType::PLAYER:
-		{
-			if (ScanHitboxes(pLocal, target) && !(!F::Backtrack.CanHitOriginal(target.m_pEntity) || G::ChokeMap[target.m_pEntity->GetIndex()] > Vars::Aimbot::Global::TickTolerance.Value || Vars::Aimbot::Hitscan::BackTrackMethod.Value == 4))
-			{
-				return true;
-			}
-			if (Vars::Backtrack::Enabled.Value)
-			{
-				for (int nHitbox = 0; nHitbox < target.m_pEntity->GetNumOfHitboxes(); nHitbox++)
+				std::vector<Vec3> vecPoints = { Vec3() };
+				if (flScale > 0.f)
 				{
-					if (!IsHitboxValid(nHitbox, Vars::Aimbot::Hitscan::ScanHitboxes.Value, (target.m_pEntity->GetVelocity().Length() < 10.f))) { continue; }
-					if (std::optional<TickRecord> ValidRecord = F::Backtrack.Aimbot(target.m_pEntity, (BacktrackMode)Vars::Aimbot::Hitscan::BackTrackMethod.Value, nHitbox))
+					vecPoints = {
+						Vec3(),
+						Vec3(vMinsS.x, vMinsS.y, vMaxsS.z),
+						Vec3(vMaxsS.x, vMinsS.y, vMaxsS.z),
+						Vec3(vMinsS.x, vMaxsS.y, vMaxsS.z),
+						Vec3(vMaxsS.x, vMaxsS.y, vMaxsS.z),
+						Vec3(vMinsS.x, vMinsS.y, vMinsS.z),
+						Vec3(vMaxsS.x, vMinsS.y, vMinsS.z),
+						Vec3(vMinsS.x, vMaxsS.y, vMinsS.z),
+						Vec3(vMaxsS.x, vMaxsS.y, vMinsS.z)
+					};
+				}
+
+				for (const auto& point : vecPoints)
+				{
+					Vec3 vCenter = {}, vTransformed = {};
+					Math::VectorTransform({}, boneMatrix[pair.first->bone], vCenter);
+					Math::VectorTransform(point, boneMatrix[pair.first->bone], vTransformed);
+
+					if (vEyePos.DistToSqr(vTransformed) > flMaxRange)
+						continue;
+
+					auto vAngles = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(pLocal->GetShootPos(), vTransformed));
+					Vec3 vForward = {};
+					Math::AngleVectors(vAngles, &vForward);
+
+					if (SDK::VisPos(pLocal, target.m_pEntity, vEyePos, vTransformed))
 					{
-						target.SimTime = ValidRecord->flSimTime;
-						target.m_vAngleTo = Math::CalcAngle(pLocal->GetShootPos(), target.m_pEntity->GetHitboxPosMatrix(nHitbox, (matrix3x4*)(&ValidRecord->BoneMatrix.BoneMatrix)));
-						target.ShouldBacktrack = true;
-						target.m_nAimedHitbox = nHitbox;
-						return true;
+						target.m_vAngleTo = vAngles;
+						if (RayToOBB(vEyePos, vForward, vCenter, vMins, vMaxs, boneMatrix[pair.first->bone])) // for the time being, no vischecks against other hitboxes
+						{
+							bool bWillHit = true;
+							if (target.m_TargetType == ETargetType::SENTRY) // point of hit for sentries needs to be within bbox
+							{
+								const matrix3x4& transform = target.m_pEntity->RenderableToWorldTransform();
+								const Vec3 vMin = target.m_pEntity->m_vecMins(), vMax = target.m_pEntity->m_vecMaxs();
+								bWillHit = RayToOBB(vEyePos, vForward, target.m_pEntity->m_vecOrigin(), vMin, vMax, transform);
+							}
+							if (bWillHit)
+							{
+								target.m_Tick = pTick;
+								target.m_vPos = vTransformed;
+								if (target.m_TargetType == ETargetType::PLAYER)
+								{
+									//if (Vars::Backtrack::Enabled.Value)
+										target.m_bBacktrack = target.m_TargetType == ETargetType::PLAYER;
+									target.m_nAimedHitbox = pair.second;
+								}
+								return true;
+							}
+						}
+						iReturn = 2;
 					}
 				}
 			}
-			return false;
 		}
-		case ETargetType::SENTRY:
-		case ETargetType::DISPENSER:
-		case ETargetType::TELEPORTER:
+		else
 		{
-			if (!Utils::VisPos(pLocal, target.m_pEntity, pLocal->GetShootPos(), target.m_vPos))
+			const float flScale = Vars::Aimbot::Hitscan::PointScale.Value / 100;
+			const Vec3 vMins = target.m_pEntity->m_vecMins(), vMinsS = vMins * flScale;
+			const Vec3 vMaxs = target.m_pEntity->m_vecMaxs(), vMaxsS = vMaxs * flScale;
+
+			std::vector<Vec3> vecPoints = { Vec3() };
+			if (flScale > 0.f)
 			{
-				//Sentryguns have hitboxes, it's better to use ScanHitboxes for them
-				if (target.m_pEntity->GetClassID() == ETFClassID::CObjectSentrygun ? !ScanHitboxes(pLocal, target) : !ScanBuildings(pLocal, target))
-				{
-					return false;
-				}
+				vecPoints = {
+					Vec3(),
+					Vec3(vMinsS.x, vMinsS.y, vMaxsS.z),
+					Vec3(vMaxsS.x, vMinsS.y, vMaxsS.z),
+					Vec3(vMinsS.x, vMaxsS.y, vMaxsS.z),
+					Vec3(vMaxsS.x, vMaxsS.y, vMaxsS.z),
+					Vec3(vMinsS.x, vMinsS.y, vMinsS.z),
+					Vec3(vMaxsS.x, vMinsS.y, vMinsS.z),
+					Vec3(vMinsS.x, vMaxsS.y, vMinsS.z),
+					Vec3(vMaxsS.x, vMaxsS.y, vMinsS.z)
+				};
 			}
 
-			break;
-		}
+			const matrix3x4& transform = target.m_pEntity->RenderableToWorldTransform();
+			for (const auto& point : vecPoints)
+			{
+				Vec3 vTransformed = target.m_pEntity->GetCenter() + point;
 
-		default:
+				if (vEyePos.DistToSqr(vTransformed) > flMaxRange)
+					continue;
+
+				auto vAngles = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(pLocal->GetShootPos(), vTransformed));
+				Vec3 vForward = {};
+				Math::AngleVectors(vAngles, &vForward);
+
+				if (SDK::VisPos(pLocal, target.m_pEntity, vEyePos, vTransformed))
+				{
+					target.m_vAngleTo = vAngles;
+					if (RayToOBB(vEyePos, vForward, target.m_pEntity->m_vecOrigin(), vMins, vMaxs, transform)) // for the time being, no vischecks against other hitboxes
+					{
+						target.m_Tick = pTick;
+						target.m_vPos = vTransformed;
+						return true;
+					}
+					iReturn = 2;
+				}
+			}
+		}
+	}
+
+	return iReturn;
+}
+
+
+
+/* Returns whether AutoShoot should fire */
+bool CAimbotHitscan::ShouldFire(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd, const Target_t& target)
+{
+	if (!Vars::Aimbot::General::AutoShoot.Value) return false;
+
+	switch (pLocal->m_iClass())
+	{
+	case TF_CLASS_SNIPER:
+	{
+		const bool bIsScoped = pLocal->IsScoped();
+
+		if (Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 1))
 		{
-			if (!Utils::VisPos(pLocal, target.m_pEntity, pLocal->GetShootPos(), target.m_vPos))
+			if (G::WeaponDefIndex != Sniper_m_TheClassic
+				&& G::WeaponDefIndex != Sniper_m_TheSydneySleeper
+				&& !G::CanHeadshot && bIsScoped)
 			{
 				return false;
 			}
-
-			break;
-		}
-	}
-
-	return true;
-}
-
-/* Returns all valid and verified targets */
-bool CAimbotHitscan::GetTarget(CBaseEntity* pLocal, CBaseCombatWeapon* pWeapon, Target_t& outTarget)
-{
-	auto validTargets = GetTargets(pLocal, pWeapon);
-	if (validTargets.empty()) { return false; }
-
-	// Sort the targets
-	const auto& sortMethod = static_cast<ESortMethod>(Vars::Aimbot::Hitscan::SortMethod.Value);
-	F::AimbotGlobal.SortTargets(&validTargets, sortMethod);
-
-	// Verify all targets
-	for (auto& target : validTargets)
-	{
-		if (VerifyTarget(pLocal, target))
-		{
-			outTarget = target;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void CAimbotHitscan::Aim(CUserCmd* pCmd, Vec3& vAngle)
-{
-	vAngle -= G::PunchAngles;
-	Math::ClampAngles(vAngle);
-
-	switch (Vars::Aimbot::Hitscan::AimMethod.Value)
-	{
-		case 0: //Plain
-		{
-			pCmd->viewangles = vAngle;
-			I::EngineClient->SetViewAngles(pCmd->viewangles);
-			break;
 		}
 
-		case 1: //Smooth
+		if (Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 2) && (bIsScoped || G::WeaponDefIndex == Sniper_m_TheClassic))
 		{
-			if (Vars::Aimbot::Hitscan::SmoothingAmount.Value == 0)
+			auto pPlayer = target.m_pEntity->As<CTFPlayer>();
+			auto pSniperRifle = pWeapon->As<CTFSniperRifle>();
+			const int nHealth = pPlayer->m_iHealth();
+			const bool bIsCritBoosted = pLocal->IsCritBoosted();
+
+			if (target.m_nAimedHitbox == HITBOX_HEAD && G::WeaponDefIndex != Sniper_m_TheSydneySleeper && (G::WeaponDefIndex != Sniper_m_TheClassic || G::WeaponDefIndex == Sniper_m_TheClassic && pSniperRifle->m_flChargedDamage() > 149.9f))
 			{
-				// plain aim at 0 smoothing factor
-				pCmd->viewangles = vAngle;
-				I::EngineClient->SetViewAngles(pCmd->viewangles);
-				break;
-			}
-			//Calculate delta of current viewangles and wanted angles
-			Vec3 vecDelta = vAngle - I::EngineClient->GetViewAngles();
-
-			//Clamp, keep the angle in possible bounds
-			Math::ClampAngles(vecDelta);
-
-			//Basic smooth by dividing the delta by wanted smooth amount
-			pCmd->viewangles += vecDelta / Vars::Aimbot::Hitscan::SmoothingAmount.Value;
-
-			//Set the viewangles from engine
-			I::EngineClient->SetViewAngles(pCmd->viewangles);
-			break;
-		}
-
-		case 2: //Silent
-		{
-			if (Vars::Aimbot::Global::FlickatEnemies.Value && !G::ShouldShift)
-			{
-				if (G::IsAttacking)
+				if (nHealth > 150)
 				{
-					Utils::FixMovement(pCmd, vAngle);
-					pCmd->viewangles = vAngle;
+					const float flDamage = Math::RemapValClamped(pSniperRifle->m_flChargedDamage(), 0.0f, 150.0f, 0.0f, 450.0f);
+					const int nDamage = static_cast<int>(flDamage);
+
+					if (nDamage < nHealth && nDamage != 450)
+						return false;
 				}
+				else if (!bIsCritBoosted && !G::CanHeadshot)
+					return false;
 			}
 			else
 			{
-				Utils::FixMovement(pCmd, vAngle);
-				pCmd->viewangles = vAngle;
-			}
-			break;
-		}
-
-		default: break;
-	}
-}
-
-/* Returns whether AutoShoot should fire */
-bool CAimbotHitscan::ShouldFire(CBaseEntity* pLocal, CBaseCombatWeapon* pWeapon, const CUserCmd* pCmd, const Target_t& target)
-{
-	if (!Vars::Aimbot::Global::AutoShoot.Value)
-	{
-		return false;
-	}
-
-	switch (G::CurItemDefIndex)
-	{
-		case Sniper_m_TheMachina:
-		case Sniper_m_ShootingStar:
-		{
-			if (!pLocal->IsScoped())
-			{
-				return false;
-			}
-
-			break;
-		}
-		default: break;
-	}
-
-	switch (pLocal->GetClassNum())
-	{
-		case CLASS_SNIPER:
-		{
-			const bool bIsScoped = pLocal->IsScoped();
-
-			if (Vars::Aimbot::Hitscan::WaitForHeadshot.Value)
-			{
-				if (G::CurItemDefIndex != Sniper_m_TheClassic
-					&& G::CurItemDefIndex != Sniper_m_TheSydneySleeper
-					&& !G::WeaponCanHeadShot && bIsScoped)
+				if (nHealth > (bIsCritBoosted ? 150 : 50))
 				{
-					return false;
-				}
-			}
+					float flCritMult = pPlayer->IsInJarate() ? 1.36f : 1.0f;
 
-			if (Vars::Aimbot::Hitscan::WaitForCharge.Value && bIsScoped)
-			{
-				const int nHealth = target.m_pEntity->GetHealth();
-				const bool bIsCritBoosted = pLocal->IsCritBoosted();
+					if (bIsCritBoosted)
+						flCritMult = 3.0f;
 
-				if (target.m_nAimedHitbox == HITBOX_HEAD && G::CurItemDefIndex !=
-					Sniper_m_TheSydneySleeper)
-				{
-					if (nHealth > 150)
+					float flBodyMult = 1.f;
+					switch (G::WeaponDefIndex)
 					{
-						const float flDamage = Math::RemapValClamped(pWeapon->GetChargeDamage(), 0.0f, 150.0f, 0.0f, 450.0f);
-						const int nDamage = static_cast<int>(flDamage);
-
-						if (nDamage < nHealth && nDamage != 450)
-						{
-							return false;
-						}
+					case Sniper_m_TheClassic: flBodyMult = 0.9f; break;
+					case Sniper_m_TheHitmansHeatmaker: flBodyMult = 0.8f; break;
+					case Sniper_m_TheMachina:
+					case Sniper_m_ShootingStar: if (pSniperRifle->m_flChargedDamage() > 149.9f) flBodyMult = 1.15f;
 					}
 
-					else
-					{
-						if (!bIsCritBoosted && !G::WeaponCanHeadShot)
-						{
-							return false;
-						}
-					}
-				}
+					const float flMax = 150.0f * flCritMult * flBodyMult;
+					const int nDamage = static_cast<int>(pSniperRifle->m_flChargedDamage() * flCritMult * flBodyMult);
 
-				else
-				{
-					if (nHealth > (bIsCritBoosted ? 150 : 50))
-					{
-						float flMult = target.m_pEntity->IsInJarate() ? 1.36f : 1.0f;
-
-						if (bIsCritBoosted)
-						{
-							flMult = 3.0f;
-						}
-
-						const float flMax = 150.0f * flMult;
-						const int nDamage = static_cast<int>(pWeapon->GetChargeDamage() * flMult);
-
-						if (nDamage < target.m_pEntity->GetHealth() && nDamage != static_cast<int>(flMax))
-						{
-							return false;
-						}
-					}
+					if (nDamage < pPlayer->m_iHealth() && nDamage != static_cast<int>(flMax))
+						return false;
 				}
 			}
-
-			break;
 		}
 
-		case CLASS_SPY:
-		{
-			if (Vars::Aimbot::Hitscan::WaitForHeadshot.Value && !pWeapon->AmbassadorCanHeadshot())
-			{
-				if (target.m_nAimedHitbox == HITBOX_HEAD)
-				{
-					return false;
-				}
-			}
-
-			break;
-		}
-
-		default: break;
+		break;
 	}
-
-	if (Vars::Aimbot::Hitscan::AimMethod.Value == 1)
-	{
-		Vec3 vForward = {};
-		Math::AngleVectors(pCmd->viewangles, &vForward);
-		const Vec3 vTraceStart = pLocal->GetShootPos();
-		const Vec3 vTraceEnd = (vTraceStart + (vForward * 8192.0f));
-
-		CGameTrace trace = {};
-		CTraceFilterHitscan filter = {};
-		filter.pSkip = pLocal;
-
-		Utils::Trace(vTraceStart, vTraceEnd, (MASK_SHOT /* | CONTENTS_GRATE | MASK_VISIBLE*/), &filter, &trace);
-
-		if (trace.entity != target.m_pEntity)
-		{
+	case TF_CLASS_SPY:
+		if (Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 1) && !pWeapon->AmbassadorCanHeadshot())
 			return false;
-		}
-
-		if (target.m_nAimedHitbox == HITBOX_HEAD)
-		{
-			if (trace.hitbox != HITBOX_HEAD)
-			{
-				return false;
-			}
-
-			if (!target.m_bHasMultiPointed)
-			{
-				Vec3 vMins = {}, vMaxs = {}, vCenter = {};
-				matrix3x4 matrix = {};
-
-				if (!target.m_pEntity->GetHitboxMinsAndMaxsAndMatrix(HITBOX_HEAD, vMins, vMaxs, matrix, &vCenter))
-				{
-					return false;
-				}
-
-				vMins *= 0.5f;
-				vMaxs *= 0.5f;
-
-				if (!Math::RayToOBB(vTraceStart, vForward, vCenter, vMins, vMaxs, matrix))
-				{
-					return false;
-				}
-			}
-		}
+		break;
 	}
 
 	return true;
 }
 
-bool CAimbotHitscan::IsAttacking(const CUserCmd* pCmd, CBaseCombatWeapon* pWeapon)
+// assume angle calculated outside with other overload
+void CAimbotHitscan::Aim(CUserCmd* pCmd, Vec3& vAngle)
 {
-	return ((pCmd->buttons & IN_ATTACK) && G::WeaponCanAttack);
-}
-
-void BulletTracer(CBaseEntity* pLocal, const Target_t& target)
-{
-	const Vec3 vecPos = G::CurWeaponType == EWeaponType::PROJECTILE ? G::PredictedPos : target.m_vPos;
-	//Color_t Color = (Utils::Rainbow());
-
-	Vec3 shootPos = pLocal->GetShootPos();
-	shootPos.z -= 5.0f;
-	const Color_t tracerColor = Vars::Visuals::BulletTracerRainbow.Value ? Utils::Rainbow() : Colors::BulletTracer;
-	I::DebugOverlay->AddLineOverlayAlpha(shootPos, vecPos, tracerColor.r, tracerColor.g, tracerColor.b, tracerColor.a, true, 5);
-}
-
-void CAimbotHitscan::Run(CBaseEntity* pLocal, CBaseCombatWeapon* pWeapon, CUserCmd* pCmd)
-{
-	static int nLastTracerTick = pCmd->tick_count;
-	static int nextSafeTick = pCmd->tick_count;
-
-	if (!Vars::Aimbot::Global::Active.Value || !Vars::Aimbot::Hitscan::Active.Value)
+	if (Vars::Aimbot::General::AimType.Value != 3)
 	{
-		return;
+		pCmd->viewangles = vAngle;
+		I::EngineClient->SetViewAngles(pCmd->viewangles); // remove these if uncommenting l124 of createmove
+	}
+	else if (G::IsAttacking)
+	{
+		SDK::FixMovement(pCmd, vAngle);
+		pCmd->viewangles = vAngle;
+		G::SilentAngles = true;
+	}
+}
+
+Vec3 CAimbotHitscan::Aim(Vec3 vCurAngle, Vec3 vToAngle, int iMethod)
+{
+	Vec3 vReturn = {};
+
+	vToAngle -= G::PunchAngles;
+	Math::ClampAngles(vToAngle);
+
+	switch (iMethod)
+	{
+	case 1: // Plain
+	case 3: // Silent
+		vReturn = vToAngle;
+		break;
+	case 2: //Smooth
+	{
+		auto shortDist = [](const float flAngleA, const float flAngleB)
+			{
+				const float flDelta = fmodf((flAngleA - flAngleB), 360.f);
+				return fmodf(2 * flDelta, 360.f) - flDelta;
+			};
+		const float t = 1.f - Vars::Aimbot::General::Smoothing.Value / 100.f;
+		vReturn.x = vCurAngle.x - shortDist(vCurAngle.x, vToAngle.x) * t;
+		vReturn.y = vCurAngle.y - shortDist(vCurAngle.y, vToAngle.y) * t;
+		break;
+	}
 	}
 
-	Target_t target = {};
+	return vReturn;
+}
 
-	const int nWeaponID = pWeapon->GetWeaponID();
-	const bool bShouldAim = (Vars::Aimbot::Global::AimKey.Value == VK_LBUTTON
-							 ? (pCmd->buttons & IN_ATTACK)
-							 : F::AimbotGlobal.IsKeyDown());
+void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
+{
+	static int iStaticAimType = Vars::Aimbot::General::AimType.Value;
+	const int iRealAimType = Vars::Aimbot::General::AimType.Value;
+	const int iLastAimType = iStaticAimType;
+	iStaticAimType = iRealAimType;
 
-//Rev minigun if enabled and aimbot active
-	if (bShouldAim)
+	const int nWeaponID = pWeapon->m_iWeaponID();
+
+	const bool bAutomatic = pWeapon->IsStreamingWeapon(), bKeepFiring = bAutomatic && G::LastUserCmd->buttons & IN_ATTACK;
+	if (bKeepFiring && !G::CanPrimaryAttack && Vars::Aimbot::General::AimType.Value)
+		pCmd->buttons |= IN_ATTACK;
+
+	switch (nWeaponID)
 	{
-		if (Vars::Aimbot::Hitscan::AutoRev.Value && nWeaponID == TF_WEAPON_MINIGUN)
+	case TF_WEAPON_SNIPERRIFLE_CLASSIC:
+		if (!iRealAimType && iLastAimType && G::IsAttacking)
+			Vars::Aimbot::General::AimType.Value = iLastAimType;
+	}
+
+	if (!Vars::Aimbot::General::AimType.Value || !G::CanPrimaryAttack && Vars::Aimbot::General::AimType.Value == 3 && (nWeaponID == TF_WEAPON_MINIGUN ? pWeapon->As<CTFMinigun>()->m_iWeaponState() == AC_STATE_FIRING || pWeapon->As<CTFMinigun>()->m_iWeaponState() == AC_STATE_SPINNING : true))
+		return;
+
+	switch (nWeaponID)
+	{
+	case TF_WEAPON_MINIGUN:
+		pCmd->buttons |= IN_ATTACK2;
+		if (pWeapon->As<CTFMinigun>()->m_iWeaponState() != AC_STATE_FIRING && pWeapon->As<CTFMinigun>()->m_iWeaponState() != AC_STATE_SPINNING)
+			return;
+		break;
+	case TF_WEAPON_SNIPERRIFLE:
+	case TF_WEAPON_SNIPERRIFLE_DECAP:
+	{
+		const bool bScoped = pLocal->IsScoped();
+
+		if (Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 4) && !bScoped)
 		{
 			pCmd->buttons |= IN_ATTACK2;
+			return;
 		}
+
+		if ((Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 3) || G::WeaponDefIndex == Sniper_m_TheMachina || G::WeaponDefIndex == Sniper_m_ShootingStar) && !bScoped)
+			return;
+
+		break;
+	}
+	case TF_WEAPON_SNIPERRIFLE_CLASSIC:
+		if (iRealAimType)
+			pCmd->buttons |= IN_ATTACK;
 	}
 
-	if (GetTarget(pLocal, pWeapon, target) && bShouldAim)
+	auto targets = SortTargets(pLocal, pWeapon);
+	if (targets.empty())
+		return;
+
+	for (auto& target : targets)
 	{
-		if (SandvichAimbot::bIsSandvich)
+		const auto iResult = CanHit(target, pLocal, pWeapon);
+		if (!iResult) continue;
+		if (iResult == 2)
 		{
-			SandvichAimbot::RunSandvichAimbot(pLocal, pWeapon, pCmd, target.m_pEntity);
+			Aim(pCmd, target.m_vAngleTo);
+			break;
 		}
 
-		if (nWeaponID != TF_WEAPON_COMPOUND_BOW
-			&& pLocal->GetClassNum() == CLASS_SNIPER
-			&& pWeapon->GetSlot() == SLOT_PRIMARY)
+		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
+		if (Vars::Aimbot::General::AimType.Value == 3)
+			G::AimPosition = target.m_vPos;
+
+		bool bShouldFire = ShouldFire(pLocal, pWeapon, pCmd, target);
+
+		if (bShouldFire)
 		{
-			const bool bScoped = pLocal->IsScoped();
-
-			if (Vars::Aimbot::Hitscan::AutoScope.Value && !bScoped)
-			{
-				pCmd->buttons |= IN_ATTACK2;
-				return;
-			}
-
-			if (Vars::Aimbot::Hitscan::ScopedOnly.Value && !bScoped)
-			{
-				return;
-			}
-		}
-
-		G::CurrentTargetIdx = target.m_pEntity->GetIndex();
-		G::HitscanRunning = true;
-		G::HitscanSilentActive = Vars::Aimbot::Hitscan::AimMethod.Value == 2;
-
-		if (G::HitscanSilentActive)
-		{
-			G::AimPos = target.m_vPos;
-		}
-
-		if (ShouldFire(pLocal, pWeapon, pCmd, target))
-		{
-			if (nWeaponID == TF_WEAPON_MINIGUN)
-			{
-				pCmd->buttons |= IN_ATTACK2;
-			}
-
-			if (G::CurItemDefIndex == Engi_s_TheWrangler || G::CurItemDefIndex ==
-				Engi_s_FestiveWrangler)
-			{
-				pCmd->buttons |= IN_ATTACK2;
-			}
-
 			pCmd->buttons |= IN_ATTACK;
 
+			if (nWeaponID == TF_WEAPON_SNIPERRIFLE_CLASSIC && pWeapon->As<CTFSniperRifle>()->m_flChargedDamage())
+				pCmd->buttons &= ~IN_ATTACK;
 
-			/*
-			// Get circular gaussian spread. Under some cases we fire a bullet right down the crosshair:
-			//	- The first bullet of a spread weapon (except for rapid fire spread weapons like the minigun)
-			//	- The first bullet of a non-spread weapon if it's been >1.25 second since firing
-			bool bFirePerfect = false;
-			if ( iBullet == 0 && pWpn )
+			if (G::WeaponDefIndex == Engi_s_TheWrangler || G::WeaponDefIndex == Engi_s_FestiveWrangler)
+				pCmd->buttons |= IN_ATTACK2;
+
+			if (Vars::Aimbot::Hitscan::Modifiers.Value & (1 << 0) && nWeaponID == TF_WEAPON_MINIGUN && !pLocal->IsPrecisionRune())
 			{
-				float flTimeSinceLastShot = (gpGlobals->curtime - pWpn->m_flLastFireTime );
-				if ( nBulletsPerShot > 1 && flTimeSinceLastShot > 0.25 )
+				if (pLocal->GetShootPos().DistTo(target.m_vPos) > Vars::Aimbot::Hitscan::TapFireDist.Value && pWeapon->GetWeaponSpread() != 0.f)
 				{
-					bFirePerfect = true;
-				}
-				else if ( nBulletsPerShot == 1 && flTimeSinceLastShot > 1.25 )
-				{
-					bFirePerfect = true;
-				}
-			}
-			*/
+					const float flTimeSinceLastShot = (pLocal->m_nTickBase() * TICK_INTERVAL) - pWeapon->m_flLastFireTime();
 
-			if (Vars::Aimbot::Hitscan::TapFire.Value && nWeaponID == TF_WEAPON_MINIGUN && !pLocal->IsPrecisionRune())
-			{
-				const bool bDo = Vars::Aimbot::Hitscan::TapFire.Value == 1
-					? pLocal->GetShootPos().DistTo(target.m_vPos) > Vars::Aimbot::Hitscan::TapFireDist.Value
-					: true;
-
-				if (bDo && pWeapon->GetWeaponSpread() != 0.f)
-				{
-					const float flTimeSinceLastShot = (pLocal->GetTickBase() * TICK_INTERVAL) - pWeapon->GetLastFireTime();
-
-					if (pWeapon->GetWeaponData().m_nBulletsPerShot > 1)
+					auto tfWeaponInfo = pWeapon->GetWeaponInfo();
+					if (tfWeaponInfo && tfWeaponInfo->GetWeaponData(0).m_nBulletsPerShot > 1)
 					{
 						if (flTimeSinceLastShot <= 0.25f)
-						{
 							pCmd->buttons &= ~IN_ATTACK;
-						}
 					}
 					else if (flTimeSinceLastShot <= 1.25f)
-					{
 						pCmd->buttons &= ~IN_ATTACK;
-					}
 				}
 			}
 		}
 
-		const bool bIsAttacking = IsAttacking(pCmd, pWeapon);
+		G::IsAttacking = SDK::IsAttacking(pLocal, pWeapon, pCmd);
 
-		if (bIsAttacking)
+		if (G::IsAttacking)
 		{
-			F::Resolver.Aimbot(target.m_pEntity, target.m_nAimedHitbox == 0);
+			if (target.m_pEntity->IsPlayer())
+			F::Resolver.Aimbot(target.m_pEntity->As<CTFPlayer>(), target.m_nAimedHitbox == 0);
 
-			G::IsAttacking = true;
-			nextSafeTick = pCmd->tick_count; // just in case.weew
-			if (Vars::Visuals::BulletTracer.Value && abs(pCmd->tick_count - nLastTracerTick) > 1)
+			if (target.m_bBacktrack)
+				pCmd->tick_count = TIME_TO_TICKS(target.m_Tick.flSimTime) + TIME_TO_TICKS(F::Backtrack.flFakeInterp);
+
+			if (!pWeapon->IsInReload())
 			{
-				//bulletTracer(pLocal, Target);
-				nLastTracerTick = pCmd->tick_count;
+				if (Vars::Visuals::Bullet::BulletTracer.Value)
+				{
+					G::BulletsStorage.clear();
+					G::BulletsStorage.push_back({ {pLocal->GetShootPos(), target.m_vPos}, I::GlobalVars->curtime + 5.f, Vars::Colors::BulletTracer.Value, true });
+				}
+				if (Vars::Visuals::Hitbox::ShowHitboxes.Value)
+				{
+					G::BoxesStorage.clear();
+					auto vBoxes = F::Visuals.GetHitboxes((matrix3x4*)(&target.m_Tick.BoneMatrix.BoneMatrix), target.m_pEntity->As<CBaseAnimating>());
+					G::BoxesStorage.insert(G::BoxesStorage.end(), vBoxes.begin(), vBoxes.end());
+				}
 			}
-		}
-
-		// Set the players tickcount (Backtrack / Interpolation removal)
-		const float flLerpTime = TICKS_TO_TIME(TIME_TO_TICKS(G::LerpTime));
-		const float simTime = target.ShouldBacktrack ? target.SimTime : target.m_pEntity->GetSimulationTime();
-		if ((Vars::Misc::DisableInterpolation.Value && target.m_TargetType == ETargetType::PLAYER && bIsAttacking) ||
-			target.ShouldBacktrack)
-		{
-			pCmd->tick_count = TIME_TO_TICKS(flLerpTime + simTime);
 		}
 
 		Aim(pCmd, target.m_vAngleTo);
+		break;
 	}
 }

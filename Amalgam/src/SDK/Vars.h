@@ -106,6 +106,7 @@ namespace Vars
 
 	NAMESPACE_BEGIN(Aimbot)
 		SUBNAMESPACE_BEGIN(General)
+			CVar(HealOnlyFriends, false)
 			CVar(AimType, 0) // 0 - Off, 1 - Normal, 2 - Smooth, 3 - Silent
 			CVar(TargetSelection, 0) // 0 - FOV, 1 - Distance
 			CVar(Target, 0b0000001) // { Bombs, NPCs, Stickies, Teleporter, Dispenser, Sentry, Players }
@@ -579,8 +580,29 @@ namespace Vars
 			CVar(IconSize, 14, VISUAL)
 		SUBNAMESPACE_END(World)
 	NAMESPACE_END(Radar)
+	NAMESPACE_BEGIN(Triggerbot)
+		SUBNAMESPACE_BEGIN(Uber)
+			CVar(Active, false)
+			CVar(OnlyFriends, false)
+			CVar(PopLocal, false)
+			CVar(AutoVacc, false)
+			CVar(HealthLeft, 35.0f)
+			CVar(VoiceCommand, false)
+			CVar(ReactFoV, 25)
+			CVar(BulletRes, true)
+			CVar(BlastRes, true)
+			CVar(FireRes, true)
+			CVar(ReactClasses, 0b000000000); //this is intuitive
+		SUBNAMESPACE_END(Uber);
 
+	NAMESPACE_END(Triggerbot);
 	NAMESPACE_BEGIN(Misc)
+		CVar(KillstreakWeapon, false)
+		SUBNAMESPACE_BEGIN(Followbot)
+			CVar(Enabled, false)
+			CVar(FriendsOnly, true)
+			CVar(Distance, 150.f);
+		SUBNAMESPACE_END(Followbot)
 		SUBNAMESPACE_BEGIN(Movement)
 			CVar(AutoStrafe, 0)
 			CVar(AutoStrafeTurnScale, 0.5f)

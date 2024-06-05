@@ -1,0 +1,121 @@
+#include "Followbot.h"
+
+/*
+ * This followbot is very basic and could need some improvements.
+ * But it's better than nothing...
+ * - lnx00
+ */
+
+constexpr float NODE_DISTANCE = 20.f;
+
+bool CFollowbot::ValidTarget(CBaseEntity* pTarget, CBaseEntity* pLocal)
+{
+	if (!pTarget || !pTarget->IsPlayer()) { return false; }
+	if (pTarget->IsDormant()) { return false; }
+	if (!pTarget->IsAlive()) { return false; }
+	if (pLocal->GetAbsOrigin().DistTo(pTarget->GetAbsOrigin()) > 900.f) { return false; } // We're too slow or got stuck
+
+	return true;
+}
+
+// Optimizes the path and removes useless Nodes
+void CFollowbot::OptimizePath(CBaseEntity* pLocal)
+{
+	std::lock_guard guard(PathMutex);
+
+	for (size_t i = 0; i < PathNodes.size(); i++)
+	{
+		auto& currentNode = PathNodes[i];
+		if (pLocal->GetAbsOrigin().DistTo(currentNode.Location) < NODE_DISTANCE)
+		{
+			int garbageNodes = static_cast<int>(i);
+			while (garbageNodes > 1 && !PathNodes.empty())
+			{
+				PathNodes.pop_front();
+				garbageNodes--;
+			}
+
+			return;
+		}
+	}
+}
+
+CBaseEntity* CFollowbot::FindTarget(CBaseEntity* pLocal)
+{
+	for (const auto& pPlayer : H::Entities.GetGroup(EGroupType::PLAYERS_TEAMMATES))
+	{
+		if (!pPlayer || !pPlayer->IsAlive()) { continue; }
+		if (pPlayer->entindex() == pLocal->entindex()) { continue; }
+		if (pLocal->GetAbsOrigin().DistTo(pPlayer->GetAbsOrigin()) > 280.f) { continue; }
+		if (Vars::Misc::Followbot::FriendsOnly.Value && !H::Entities.IsFriend(pPlayer->entindex())) { continue; }
+
+		if (ValidTarget(pPlayer, pLocal))
+		{
+			return pPlayer;
+		}
+	}
+
+	return nullptr;
+}
+
+void CFollowbot::Run(CUserCmd* pCmd)
+{
+	const auto& pLocal = H::Entities.GetLocal();
+	if (!Vars::Misc::Followbot::Enabled.Value || !pLocal || !pLocal->IsAlive())
+	{
+		Reset();
+		return;
+	}
+
+	// Find a new target if we don't have one
+	if (!ValidTarget(CurrentTarget, pLocal) || PathNodes.size() >= 300)
+	{
+		Reset();
+		CurrentTarget = FindTarget(pLocal);
+	}
+	if (!CurrentTarget) { return; }
+
+	// Store the target position and follow him
+	static Timer pathTimer{};
+	if (true)//pathTimer.Run(0))
+	{
+		const Vec3 localPos = pLocal->GetAbsOrigin();
+
+		if (localPos.DistTo(CurrentTarget->GetAbsOrigin()) >= Vars::Misc::Followbot::Distance.Value)
+		{
+			const Vec3& targetPos = CurrentTarget->GetAbsOrigin();
+			SDK::WalkTo(pCmd, pLocal, (Vec3&)targetPos);
+
+		}
+		if (!CurrentTarget->OnGround() || !(CurrentTarget->m_hGroundEntity() > 0)) {
+			pCmd->buttons &= ~IN_JUMP;
+
+			pCmd->buttons |= IN_JUMP;
+		}
+	}
+}
+
+void CFollowbot::Reset()
+{
+	CurrentTarget = nullptr;
+	PathNodes.clear();
+}
+
+void CFollowbot::Draw()
+{
+	if (!Vars::Misc::Followbot::Enabled.Value || !CurrentTarget) { return; }
+	if (PathNodes.size() < 2) { return; }
+
+	const std::deque<PathNode> tmpPath = PathNodes;
+	for (size_t i = 1; i < tmpPath.size(); i++)
+	{
+		auto& currentNode = tmpPath[i];
+		auto& lastNode = tmpPath[i - 1];
+
+		Vec3 vcScreen, vlScreen;
+		if (SDK::W2S(currentNode.Location, vcScreen) && SDK::W2S(lastNode.Location, vlScreen))
+		{
+			H::Draw.Line(vlScreen.x, vlScreen.y, vcScreen.x, vcScreen.y, { 255, 255, 255, 255 });
+		}
+	}
+}

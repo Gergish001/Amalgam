@@ -33,6 +33,8 @@ bool CAimbotGlobal::ShouldIgnore(CTFPlayer* pTarget, CTFPlayer* pLocal, CTFWeapo
 
 	if (pLocal->m_iTeamNum() == pTarget->m_iTeamNum())
 	{
+		if (bMedigun && Vars::Aimbot::General::HealOnlyFriends.Value && !pTarget->IsFriend())
+			return true;
 		if (bMedigun)
 			return pTarget->IsInvisible();
 		return false;

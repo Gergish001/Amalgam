@@ -160,6 +160,9 @@
     <ClCompile Include="src\Hooks\CL_CheckForPureServerWhitelist.cpp" />
     <ClCompile Include="src\Hooks\ViewRender_LevelInit.cpp" />
     <ClCompile Include="src\Hooks\ViewRender_LevelShutdown.cpp" />
+    <ClCompile Include="src\Features\Killstreak\Killstreak.cpp" />
+    <ClCompile Include="src\Features\Fedworking\Fedworking.cpp" />
+    <ClCompile Include="src\Features\Followbot\Followbot.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Utils\UtlVector\UtlVector.h" />
@@ -416,6 +419,9 @@
     <ClInclude Include="src\Hooks\Direct3DDevice9_EndScene.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\CTFGameRules.h" />
     <ClInclude Include="src\SDK\Definitions\Interfaces\ViewRenderBeams.h" />
+    <ClInclude Include="src\Features\Killstreak\Killstreak.h" />
+    <ClInclude Include="src\Features\Fedworking\Fedworking.h" />
+    <ClInclude Include="src\Features\Followbot\Followbot.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

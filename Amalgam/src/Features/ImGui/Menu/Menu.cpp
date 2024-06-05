@@ -147,6 +147,19 @@ void CMenu::MenuAimbot()
 				FToggle("Avoid random crits", Vars::CritHack::AvoidRandom, FToggle_Middle);
 				FToggle("Always melee", Vars::CritHack::AlwaysMelee);
 				FToggle("No spread", Vars::Aimbot::General::NoSpread, FToggle_Middle);
+				FToggle("Heal only friends", Vars::Aimbot::General::HealOnlyFriends);
+				if (FButton("Apply aussie+isotope"))
+				{
+				}
+				if (FButton("Clear"))
+				{
+				}
+				FToggle("Killstreak Weapon", Vars::Misc::KillstreakWeapon);
+				FToggle("Enable Followbot", Vars::Misc::Followbot::Enabled, FToggle_Middle);
+
+					FToggle("Friends only", Vars::Misc::Followbot::FriendsOnly);
+					FSlider("Follow Distance", Vars::Misc::Followbot::Distance, 50.f, 400.f, 50.0f);
+
 			} EndSection();
 			if (Section("Backtrack"))
 			{

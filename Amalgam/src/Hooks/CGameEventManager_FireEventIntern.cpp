@@ -8,6 +8,8 @@
 #include "../Features/PacketManip/AntiAim/AntiAim.h"
 #include "../Features/Resolver/Resolver.h"
 #include "../Features/Visuals/Visuals.h"
+#include "../Features/Fedworking/Fedworking.h"
+#include "../Features/Killstreak/Killstreak.h"
 
 MAKE_SIGNATURE(CGameEventManager_FireEventIntern, "engine.dll", "44 88 44 24 ? 48 89 4C 24 ? 55 57", 0x0);
 
@@ -21,7 +23,8 @@ MAKE_HOOK(CGameEventManager_FireEventIntern, S::CGameEventManager_FireEventInter
 
 	auto pLocal = H::Entities.GetLocal();
 	auto uHash = FNV1A::Hash(pEvent->GetName());
-
+	//F::Killstreaker.FireEvents(pEvent, uHash);
+	//F::Killstreaker.FireEvents(pEvent, uHash);
 	F::Records.Event(pEvent, uHash, pLocal);
 	F::CritHack.Event(pEvent, uHash, pLocal);
 	F::Misc.Event(pEvent, uHash);
@@ -61,6 +64,16 @@ MAKE_HOOK(CGameEventManager_FireEventIntern, S::CGameEventManager_FireEventInter
 		auto kv = new KeyValues("MVM_Revive_Response");
 		kv->SetInt("accepted", 1);
 		I::EngineClient->ServerCmdKeyValues(kv);
+	}
+	case FNV1A::HashConst("party_chat"):
+	{
+		const auto msg = pEvent->GetString("text");
+
+		// Handle networking
+		if (strncmp(msg, "FED@", strlen("FED@")) == 0)
+		{
+			F::Fedworking.HandleMessage(msg);
+		}
 	}
 	}
 

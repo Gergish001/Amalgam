@@ -11,6 +11,7 @@
 #include "../Features/TickHandler/TickHandler.h"
 #include "../Features/Visuals/Visuals.h"
 #include "../Features/Visuals/FakeAngle/FakeAngle.h"
+#include "../Features/Followbot/Followbot.h"
 
 MAKE_HOOK(ClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 21), bool, __fastcall,
 	CClientModeShared* ecx, float flInputSampleTime, CUserCmd* pCmd)
@@ -102,7 +103,7 @@ MAKE_HOOK(ClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 2
 	F::NoSpread.Run(pLocal, pWeapon, pCmd);
 	F::Misc.RunPost(pLocal, pCmd, *pSendPacket);
 	F::Resolver.CreateMove();
-
+	F::Followbot.Run(pCmd);
 	{
 		static bool bWasSet = false;
 		const bool bOverchoking = I::ClientState->chokedcommands >= 21; // failsafe

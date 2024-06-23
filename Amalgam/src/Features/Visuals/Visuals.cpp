@@ -128,28 +128,15 @@ void CVisuals::DrawOnScreenPing(CTFPlayer* pLocal)
 	if (flFake || Vars::Backtrack::Interp.Value && Vars::Backtrack::Enabled.Value)
 	{
 		if (flLatency > 0.f)
-		{
-			if (!Vars::Debug::Info.Value)
-				H::Draw.String(fFont, x, y, Vars::Menu::Theme::Active.Value, align, "Real %.0f (+ %.0f) ms", flLatency, flFake);
-			else
-				H::Draw.String(fFont, x, y, Vars::Menu::Theme::Active.Value, align, "In %.0f, Out %.0f (+ %.0f) ms", flLatencyIn, flLatencyOut, flFake);
-		}
+		
 		else
 			H::Draw.String(fFont, x, y, Vars::Menu::Theme::Active.Value, align, "Syncing");
 	}
 	else
 	{
-		if (!Vars::Debug::Info.Value)
-			H::Draw.String(fFont, x, y, Vars::Menu::Theme::Active.Value, align, "Real %.0f ms", flLatency);
-		else
-			H::Draw.String(fFont, x, y, Vars::Menu::Theme::Active.Value, align, "In %.0f, Out %.0f ms", flLatencyIn, flLatencyOut);
+		
 	}
 	H::Draw.String(fFont, x, y += fFont.m_nTall + 1, Vars::Menu::Theme::Active.Value, align, "Scoreboard %d ms", iLatencyScoreboard);
-	if (Vars::Debug::Info.Value)
-	{
-		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, align, "iTickCount %i (%i, %i, %i)", F::Backtrack.iTickCount, TIME_TO_TICKS(F::Backtrack.GetReal()), TIME_TO_TICKS(flLatencyIn / 1000), TIME_TO_TICKS(flLatencyOut / 1000));
-		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, align, "G::AnticipatedChoke %i", G::AnticipatedChoke);
-	}
 }
 
 void CVisuals::DrawOnScreenConditions(CTFPlayer* pLocal)
@@ -187,39 +174,6 @@ void CVisuals::DrawSeedPrediction(CTFPlayer* pLocal)
 {
 	if (!(Vars::Menu::Indicators.Value & (1 << 5)) || !pLocal || !pLocal->IsAlive() || !Vars::Aimbot::General::NoSpread.Value)
 		return;
-
-	if (!Vars::Debug::Info.Value)
-	{
-		auto pWeapon = H::Entities.GetWeapon();
-		if (!pWeapon || !F::NoSpreadHitscan.ShouldRun(pLocal, pWeapon))
-			return;
-	}
-
-	int x = Vars::Menu::SeedPredictionDisplay.Value.x;
-	int y = Vars::Menu::SeedPredictionDisplay.Value.y + 8;
-	const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
-
-	EAlign align = ALIGN_TOP;
-	if (x <= (100 + 50 * Vars::Menu::DPI.Value))
-	{
-		x -= 42 * Vars::Menu::DPI.Value;
-		align = ALIGN_TOPLEFT;
-	}
-	else if (x >= H::Draw.m_nScreenW - (100 + 50 * Vars::Menu::DPI.Value))
-	{
-		x += 42 * Vars::Menu::DPI.Value;
-		align = ALIGN_TOPRIGHT;
-	}
-
-	const auto& cColor = F::NoSpreadHitscan.bSynced ? Vars::Menu::Theme::Active.Value : Vars::Menu::Theme::Inactive.Value;
-
-	H::Draw.String(fFont, x, y, cColor, align, std::format("Uptime {}", F::NoSpreadHitscan.GetFormat(F::NoSpreadHitscan.flServerTime)).c_str());
-	H::Draw.String(fFont, x, y += fFont.m_nTall + 1, cColor, align, std::format("Mantissa step {}", F::NoSpreadHitscan.flMantissaStep).c_str());
-	if (Vars::Debug::Info.Value)
-	{
-		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, cColor, align, std::format("Seed {}", F::NoSpreadHitscan.iSeed).c_str());
-		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, cColor, align, std::format("{} ({})", F::NoSpreadHitscan.dTimeDelta, F::NoSpreadHitscan.vTimeDeltas.size()).c_str());
-	}
 }
 
 void CVisuals::ProjectileTrace(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const bool bQuick)

@@ -25,7 +25,6 @@ public:
 	void DrawSeedPrediction(CTFPlayer* pLocal);
 	void ProjectileTrace(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const bool bQuick = true);
 	void DrawAntiAim(CTFPlayer* pLocal);
-	void DrawDebugInfo(CTFPlayer* pLocal);
 
 	std::vector<DrawBox> GetHitboxes(matrix3x4 bones[128], CBaseAnimating* pEntity, const int iHitbox = -1);
 	void DrawBulletLines();

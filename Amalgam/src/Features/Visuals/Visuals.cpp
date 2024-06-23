@@ -250,28 +250,6 @@ void CVisuals::DrawAntiAim(CTFPlayer* pLocal)
 {
 	if (!pLocal->IsAlive() || pLocal->IsAGhost() || !I::Input->CAM_IsThirdPerson())
 		return;
-
-	if (F::AntiAim.AntiAimOn() && Vars::Debug::AntiAimLines.Value)
-	{
-		const auto& vOrigin = pLocal->GetAbsOrigin();
-
-		Vec3 vScreen1, vScreen2;
-		if (SDK::W2S(vOrigin, vScreen1))
-		{
-			constexpr auto distance = 50.f;
-			if (SDK::W2S(Math::GetRotatedPosition(vOrigin, F::AntiAim.vRealAngles.y, distance), vScreen2))
-				H::Draw.Line(vScreen1.x, vScreen1.y, vScreen2.x, vScreen2.y, { 0, 255, 0, 255 });
-
-			if (SDK::W2S(Math::GetRotatedPosition(vOrigin, F::AntiAim.vFakeAngles.y, distance), vScreen2))
-				H::Draw.Line(vScreen1.x, vScreen1.y, vScreen2.x, vScreen2.y, { 255, 0, 0, 255 });
-		}
-
-		for (auto& vPair : F::AntiAim.vEdgeTrace)
-		{
-			if (SDK::W2S(vPair.first, vScreen1) && SDK::W2S(vPair.second, vScreen2))
-				H::Draw.Line(vScreen1.x, vScreen1.y, vScreen2.x, vScreen2.y, { 255, 255, 255, 255 });
-		}
-	}
 }
 
 std::vector<DrawBox> CVisuals::GetHitboxes(matrix3x4 bones[128], CBaseAnimating* pEntity, const int iHitbox)
@@ -387,19 +365,6 @@ void CVisuals::DrawServerHitboxes(CTFPlayer* pLocal)
 	if (iOldTick == I::GlobalVars->tickcount)
 		return;
 	iOldTick = I::GlobalVars->tickcount;
-
-	if (I::Input->CAM_IsThirdPerson() && Vars::Debug::ServerHitbox.Value && pLocal->IsAlive())
-	{
-		using GetServerAnimating_t = void* (*)(int);
-		static auto GetServerAnimating = S::GetServerAnimating.As<GetServerAnimating_t>();
-
-		using DrawServerHitboxes_t = void(__fastcall*)(void*, float, bool); // C_BaseAnimating, Duration, MonoColour
-		static auto DrawServerHitboxes = S::DrawServerHitboxes.As<DrawServerHitboxes_t>();
-
-		void* server_animating = GetServerAnimating(pLocal->entindex());
-		if (server_animating)
-			DrawServerHitboxes(server_animating, TICK_INTERVAL, true);
-	}
 }
 
 void CVisuals::RenderLine(const Vec3& vStart, const Vec3& vEnd, Color_t cLine, bool bZBuffer)

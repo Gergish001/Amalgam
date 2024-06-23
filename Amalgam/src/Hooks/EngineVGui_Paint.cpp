@@ -40,7 +40,6 @@ void Paint()
 		F::SpectatorList.Run(pLocal);
 		F::CritHack.Draw(pLocal);
 		F::Visuals.DrawTickbaseText(pLocal);
-		F::Visuals.DrawDebugInfo(pLocal);
 	}
 	I::MatSystemSurface->FinishDrawing();
 }

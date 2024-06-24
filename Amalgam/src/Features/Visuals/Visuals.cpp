@@ -320,6 +320,38 @@ void CVisuals::DrawAntiAim(CTFPlayer* pLocal)
 	}
 }
 
+void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
+{
+	// Debug info
+	if (Vars::Debug::Info.Value)
+	{
+		int x = 10, y = 10;
+		const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
+
+		Vec3 vOrigin = pLocal->m_vecOrigin();
+		H::Draw.String(fFont, x, y, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, "Origin: (%.3f, %.3f, %.3f)", vOrigin.x, vOrigin.y, vOrigin.z);
+
+		Vec3 vVelocity = pLocal->m_vecVelocity();
+		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, "Velocity: %.3f (%.3f, %.3f, %.3f)", vVelocity.Length(), vVelocity.x, vVelocity.y, vVelocity.z);
+
+		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, std::format("Attacking: {} ({}, {})", G::IsAttacking, G::CanPrimaryAttack, G::CanSecondaryAttack).c_str());
+
+		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, "RoundState: %i", SDK::GetRoundState());
+
+		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
+		
+		H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", G::ShiftedTicks, G::ShiftedGoal).c_str());
+
+		if (auto pCmd = G::LastUserCmd)
+		{
+			H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, "pCmd move: (%.0f, %.0f)", pCmd->forwardmove, pCmd->sidemove);
+			H::Draw.String(fFont, x, y += fFont.m_nTall + 1, { 255, 255, 255, 255 }, ALIGN_TOPLEFT, "pCmd buttons: %i", pCmd->buttons);
+		}
+	}
+}
+
+
+
 std::vector<DrawBox> CVisuals::GetHitboxes(matrix3x4 bones[128], CBaseAnimating* pEntity, const int iHitbox)
 {
 	std::vector<DrawBox> vBoxes = {};

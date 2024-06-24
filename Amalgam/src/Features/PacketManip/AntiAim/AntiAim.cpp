@@ -98,6 +98,11 @@ float CAntiAim::GetYawOffset(CTFPlayer* pEntity, bool bFake)
 		case 3: return 180.f;
 		case 4: return fmod(I::GlobalVars->tickcount * Vars::AntiHack::AntiAim::SpinSpeed.Value + 180.f, 360.f) - 180.f;
 		case 5: return (GetEdge(pEntity, I::EngineClient->GetViewAngles().y, bUpPitch) ? 1 : -1) * (bFake ? -90 : 90);
+		case 6: 
+		{
+			float randomYaw = SDK::StdRandomInt(-180, 180);
+			return randomYaw;
+		}
 	}
 	return 0.f;
 }
@@ -165,11 +170,14 @@ float CAntiAim::GetPitch(float flCurPitch)
 	case 3: return iFake ? CalculateCustomRealPitch(0.f, iFake - 1) : 0.f;
 	case 4:
 		{
-		// Generate a random float between -89.0f and 89.0f
-			float randomPitch = -89.f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (89.f - (-89.f))));
+		float randomPitch = SDK::StdRandomInt(-89, 89);
 			return randomPitch;
 		}
 
+
+	}
+
+	return iFake ? -89.f + (89.f * (iFake - 1)) : flCurPitch;
 }
 
 

@@ -98,6 +98,11 @@ float CAntiAim::GetYawOffset(CTFPlayer* pEntity, bool bFake)
 		case 3: return 180.f;
 		case 4: return fmod(I::GlobalVars->tickcount * Vars::AntiHack::AntiAim::SpinSpeed.Value + 180.f, 360.f) - 180.f;
 		case 5: return (GetEdge(pEntity, I::EngineClient->GetViewAngles().y, bUpPitch) ? 1 : -1) * (bFake ? -90 : 90);
+		case 6: 
+		{
+			float randomYaw = SDK::StdRandomInt(-180, 180);
+			return randomYaw;
+		}
 	}
 	return 0.f;
 }
@@ -147,12 +152,29 @@ float CAntiAim::CalculateCustomRealPitch(float flWishPitch, bool bFakeDown)
 
 float CAntiAim::GetPitch(float flCurPitch)
 {
-	const int iFake = Vars::AntiHack::AntiAim::PitchFake.Value, iReal = Vars::AntiHack::AntiAim::PitchReal.Value;
+	const int iFake = Vars::AntiHack::AntiAim::PitchFake.Value;
+	const int iReal = Vars::AntiHack::AntiAim::PitchReal.Value;
+
+	// Initialize random seed if needed
+	static bool bInitialized = false;
+	if (!bInitialized)
+	{
+		srand(static_cast<unsigned int>(time(nullptr)));
+		bInitialized = true;
+	}
+
 	switch (iReal)
 	{
-		case 1: return iFake ? CalculateCustomRealPitch(-89.f, iFake - 1) : -89.f;
-		case 2: return iFake ? CalculateCustomRealPitch(89.f, iFake - 1) : 89.f;
-		case 3: return iFake ? CalculateCustomRealPitch(0.f, iFake - 1) : 0.f;
+	case 1: return iFake ? CalculateCustomRealPitch(-89.f, iFake - 1) : -89.f;
+	case 2: return iFake ? CalculateCustomRealPitch(89.f, iFake - 1) : 89.f;
+	case 3: return iFake ? CalculateCustomRealPitch(0.f, iFake - 1) : 0.f;
+	case 4:
+		{
+		float randomPitch = SDK::StdRandomInt(-89, 89);
+			return randomPitch;
+		}
+
+
 	}
 
 	return iFake ? -89.f + (89.f * (iFake - 1)) : flCurPitch;

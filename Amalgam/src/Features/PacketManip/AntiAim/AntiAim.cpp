@@ -147,15 +147,29 @@ float CAntiAim::CalculateCustomRealPitch(float flWishPitch, bool bFakeDown)
 
 float CAntiAim::GetPitch(float flCurPitch)
 {
-	const int iFake = Vars::AntiHack::AntiAim::PitchFake.Value, iReal = Vars::AntiHack::AntiAim::PitchReal.Value;
-	switch (iReal)
+	const int iFake = Vars::AntiHack::AntiAim::PitchFake.Value;
+	const int iReal = Vars::AntiHack::AntiAim::PitchReal.Value;
+
+	// Initialize random seed if needed
+	static bool bInitialized = false;
+	if (!bInitialized)
 	{
-		case 1: return iFake ? CalculateCustomRealPitch(-89.f, iFake - 1) : -89.f;
-		case 2: return iFake ? CalculateCustomRealPitch(89.f, iFake - 1) : 89.f;
-		case 3: return iFake ? CalculateCustomRealPitch(0.f, iFake - 1) : 0.f;
+		srand(static_cast<unsigned int>(time(nullptr)));
+		bInitialized = true;
 	}
 
-	return iFake ? -89.f + (89.f * (iFake - 1)) : flCurPitch;
+	switch (iReal)
+	{
+	case 1: return iFake ? CalculateCustomRealPitch(-89.f, iFake - 1) : -89.f;
+	case 2: return iFake ? CalculateCustomRealPitch(89.f, iFake - 1) : 89.f;
+	case 3: return iFake ? CalculateCustomRealPitch(0.f, iFake - 1) : 0.f;
+	case 4:
+		{
+		// Generate a random float between -89.0f and 89.0f
+			float randomPitch = -89.f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (89.f - (-89.f))));
+			return randomPitch;
+		}
+
 }
 
 

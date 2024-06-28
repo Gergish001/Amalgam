@@ -5,9 +5,7 @@ class CCore
 {
 public:
 	void Load();
-	void Unload();
 
-	bool ShouldUnload();
 	bool bUnload = false;
 };
 

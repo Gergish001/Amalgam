@@ -8,9 +8,6 @@ DWORD WINAPI MainThread(LPVOID lpParam)
 		Sleep(2000);
 
 	U::Core.Load();
-	while (!U::Core.ShouldUnload())
-		Sleep(50);
-	U::Core.Unload();
 
 #ifndef _DEBUG
 	SetUnhandledExceptionFilter(nullptr);

@@ -129,11 +129,11 @@ namespace Vars
 			CVar(FOVCircle, true)
 			CVar(NoSpread, false)
 
-			CVar(HitscanPeek, 1) // debug
-			CVar(PeekDTOnly, true) // debug
-			CVar(NoSpreadOffset, 0.f) // debug
-			CVar(NoSpreadAverage, 5) // debug
-			CVarEnum(AimHoldsFire, 2, False, MinigunOnly, Always) // debug
+			CVar(HitscanPeek, 1, NOSAVE) // debug
+			CVar(PeekDTOnly, true, NOSAVE) // debug
+			CVar(NoSpreadOffset, 0.f, NOSAVE) // debug
+			CVar(NoSpreadAverage, 5, NOSAVE) // debug
+			CVarEnum(AimHoldsFire, 2, NOSAVE, False, MinigunOnly, Always) // debug
 		SUBNAMESPACE_END(Global)
 
 		SUBNAMESPACE_BEGIN(Hitscan)
@@ -155,34 +155,34 @@ namespace Vars
 			CVar(SplashRadius, 90.f)
 			CVar(AutoRelease, 0.f)
 
-			CVar(GroundSamples, 33) // debug
-			CVar(GroundStraightFuzzyValue, 100.f) // debug
-			CVar(GroundLowMinimumSamples, 8) // debug
-			CVar(GroundHighMinimumSamples, 16) // debug
-			CVar(GroundLowMinimumDistance, 0.f) // debug
-			CVar(GroundHighMinimumDistance, 2500.f) // debug
+			CVar(GroundSamples, 33, NOSAVE) // debug
+			CVar(GroundStraightFuzzyValue, 100.f, NOSAVE) // debug
+			CVar(GroundLowMinimumSamples, 8, NOSAVE) // debug
+			CVar(GroundHighMinimumSamples, 16, NOSAVE) // debug
+			CVar(GroundLowMinimumDistance, 0.f, NOSAVE) // debug
+			CVar(GroundHighMinimumDistance, 2500.f, NOSAVE) // debug
 
-			CVar(AirSamples, 33) // debug
-			CVar(AirStraightFuzzyValue, 10.f) // debug
-			CVar(AirLowMinimumSamples, 3) // debug
-			CVar(AirHighMinimumSamples, 3) // debug
-			CVar(AirLowMinimumDistance, 100000.f) // debug
-			CVar(AirHighMinimumDistance, 100000.f) // debug
+			CVar(AirSamples, 33, NOSAVE) // debug
+			CVar(AirStraightFuzzyValue, 10.f, NOSAVE) // debug
+			CVar(AirLowMinimumSamples, 3, NOSAVE) // debug
+			CVar(AirHighMinimumSamples, 3, NOSAVE) // debug
+			CVar(AirLowMinimumDistance, 100000.f, NOSAVE) // debug
+			CVar(AirHighMinimumDistance, 100000.f, NOSAVE) // debug
 
-			CVar(VelocityAverageCount, 5) // debug
-			CVar(VerticalShift, 5.f) // debug
-			CVar(LatencyOffset, 0.f) // debug
-			CVar(HullIncrease, 0.f) // debug
-			CVar(DragOverride, 0.f) // debug
-			CVar(TimeOverride, 0.f) // debug
-			CVar(HuntsmanLerp, 100.f) // debug
-			CVar(SplashGrates, true) // debug
-			CVar(SplashRocket, false) // debug
-			CVar(SplashPoints, 100) // debug
-			CVar(SplashCountDirect, 100) // debug
-			CVar(SplashCountArc, 5) // debug
-			CVar(DeltaCount, 5) // debug
-			CVarEnum(DeltaMode, 0, Average, Max) // debug
+			CVar(VelocityAverageCount, 5, NOSAVE) // debug
+			CVar(VerticalShift, 5.f, NOSAVE) // debug
+			CVar(LatencyOffset, 0.f, NOSAVE) // debug
+			CVar(HullIncrease, 0.f, NOSAVE) // debug
+			CVar(DragOverride, 0.f, NOSAVE) // debug
+			CVar(TimeOverride, 0.f, NOSAVE) // debug
+			CVar(HuntsmanLerp, 100.f, NOSAVE) // debug
+			CVar(SplashGrates, true, NOSAVE) // debug
+			CVar(SplashRocket, false, NOSAVE) // debug
+			CVar(SplashPoints, 100, NOSAVE) // debug
+			CVar(SplashCountDirect, 100, NOSAVE) // debug
+			CVar(SplashCountArc, 5, NOSAVE) // debug
+			CVar(DeltaCount, 5, NOSAVE) // debug
+			CVarEnum(DeltaMode, 0, NOSAVE, Average, Max) // debug
 		SUBNAMESPACE_END(Projectile)
 
 		SUBNAMESPACE_BEGIN(Melee)
@@ -191,9 +191,9 @@ namespace Vars
 			CVar(SwingPrediction, false)
 			CVar(WhipTeam, false)
 
-			CVar(SwingTicks, 13) // debug
-			CVar(BackstabAccountPing, true) // debug
-			CVar(BackstabDoubleTest, true) // debug
+			CVar(SwingTicks, 13, NOSAVE) // debug
+			CVar(BackstabAccountPing, true, NOSAVE) // debug
+			CVar(BackstabDoubleTest, true, NOSAVE) // debug
 		SUBNAMESPACE_END(Melee)
 
 		SUBNAMESPACE_BEGIN(Healing)
@@ -216,7 +216,7 @@ namespace Vars
 		CVar(Interp, 0)
 		CVar(Window, 185)
 
-		CVar(Offset, 0) // debug
+		CVar(Offset, 0, NOSAVE) // debug
 	NAMESPACE_END(Backtrack)
 
 	NAMESPACE_BEGIN(CL_Move)
@@ -524,29 +524,29 @@ namespace Vars
 		SUBNAMESPACE_END(ProjectileTrajectory)
 
 		SUBNAMESPACE_BEGIN(Trajectory)
-			CVar(Overwrite, false) // debug
-			CVar(OffX, 16.f) // debug
-			CVar(OffY, 8.f) // debug
-			CVar(OffZ, -6.f) // debug
-			CVar(Pipes, true) // debug
-			CVar(Hull, 5.f) // debug
-			CVar(Speed, 1200.f) // debug
-			CVar(Gravity, 1.f) // debug
-			CVar(NoSpin, false) // debug
-			CVar(LifeTime, 2.2f) // debug
-			CVar(UpVelocity, 200.f) // debug
-			CVar(AngVelocityX, 600.f) // debug
-			CVar(AngVelocityY, -1200.f) // debug
-			CVar(AngVelocityZ, 0.f) // debug
-			CVar(Drag, 1.f) // debug
-			CVar(DragBasisX, 0.003902f) // debug
-			CVar(DragBasisY, 0.009962f) // debug
-			CVar(DragBasisZ, 0.009962f) // debug
-			CVar(AngDragBasisX, 0.003618f) // debug
-			CVar(AngDragBasisY, 0.001514f) // debug
-			CVar(AngDragBasisZ, 0.001514f) // debug
-			CVar(MaxVelocity, 2000.f) // debug
-			CVar(MaxAngularVelocity, 3600.f) // debug
+			CVar(Overwrite, false, NOSAVE) // debug
+			CVar(OffX, 16.f, NOSAVE) // debug
+			CVar(OffY, 8.f, NOSAVE) // debug
+			CVar(OffZ, -6.f, NOSAVE) // debug
+			CVar(Pipes, true, NOSAVE) // debug
+			CVar(Hull, 5.f, NOSAVE) // debug
+			CVar(Speed, 1200.f, NOSAVE) // debug
+			CVar(Gravity, 1.f, NOSAVE) // debug
+			CVar(NoSpin, false, NOSAVE) // debug
+			CVar(LifeTime, 2.2f, NOSAVE) // debug
+			CVar(UpVelocity, 200.f, NOSAVE) // debug
+			CVar(AngVelocityX, 600.f, NOSAVE) // debug
+			CVar(AngVelocityY, -1200.f, NOSAVE) // debug
+			CVar(AngVelocityZ, 0.f, NOSAVE) // debug
+			CVar(Drag, 1.f, NOSAVE) // debug
+			CVar(DragBasisX, 0.003902f, NOSAVE) // debug
+			CVar(DragBasisY, 0.009962f, NOSAVE) // debug
+			CVar(DragBasisZ, 0.009962f, NOSAVE) // debug
+			CVar(AngDragBasisX, 0.003618f, NOSAVE) // debug
+			CVar(AngDragBasisY, 0.001514f, NOSAVE) // debug
+			CVar(AngDragBasisZ, 0.001514f, NOSAVE) // debug
+			CVar(MaxVelocity, 2000.f, NOSAVE) // debug
+			CVar(MaxAngularVelocity, 3600.f, NOSAVE) // debug
 		SUBNAMESPACE_END(ProjectileTrajectory)
 
 		SUBNAMESPACE_BEGIN(Hitbox)
@@ -627,9 +627,9 @@ namespace Vars
 			CVar(CrouchSpeed, false)
 			CVar(MovementLock, false)
 
-			CVar(TimingOffset, 0) // debug
-			CVar(ChokeCount, 1) // debug
-			CVar(ApplyAbove, 0) // debug
+			CVar(TimingOffset, 0, NOSAVE) // debug
+			CVar(ChokeCount, 1, NOSAVE) // debug
+			CVar(ApplyAbove, 0, NOSAVE) // debug
 		SUBNAMESPACE_END(Movement)
 
 		SUBNAMESPACE_BEGIN(Exploits)
@@ -807,14 +807,14 @@ namespace Vars
 	NAMESPACE_END(Logging)
 
 	NAMESPACE_BEGIN(Debug)
-		CVar(Info, false)
-		CVar(Logging, false)
-		CVar(ServerHitbox, false)
+		CVar(Info, false, NOSAVE)
+		CVar(Logging, false, NOSAVE)
+		CVar(ServerHitbox, false, NOSAVE)
 		CVar(AntiAimLines, false)
 		CVar(CrashLogging, true)
 #ifdef DEBUG_TRACES
-		CVar(VisualizeTraces, false)
-		CVar(VisualizeTraceHits, false)
+		CVar(VisualizeTraces, false, NOSAVE)
+		CVar(VisualizeTraceHits, false, NOSAVE)
 #endif
 	NAMESPACE_END(Debug)
 }

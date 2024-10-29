@@ -1,15 +1,15 @@
 <p align="center">
-  <a href="https://nightly.link/rei-2/Amalgam/workflows/msbuild/master/Amalgamx64Release.zip">
+  <a href="https://nightly.link/Gergish001/Amalgam/workflows/msbuild/master/Amalgamx64Release.zip">
     <img src=".github/assets/download.png" alt="Download" width="auto" height="auto">
   </a>
-  <a href="https://nightly.link/rei-2/Amalgam/workflows/msbuild/master/Amalgamx64ReleaseAVX2.zip">
+  <a href="https://nightly.link/Gergish001/Amalgam/workflows/msbuild/master/Amalgamx64ReleaseAVX2.zip">
     <img src=".github/assets/download_avx2.png" alt="Download AVX2" width="auto" height="auto">
   </a>
   <br>
-  <a href="https://nightly.link/rei-2/Amalgam/workflows/msbuild/master/Amalgamx64ReleasePDB.zip">
+  <a href="https://nightly.link/Gergish001/Amalgam/workflows/msbuild/master/Amalgamx64ReleasePDB.zip">
     <img src=".github/assets/pdb.png" alt="PDB" width="auto" height="auto">
   </a>
-  <a href="https://nightly.link/rei-2/Amalgam/workflows/msbuild/master/Amalgamx64ReleaseAVX2PDB.zip">
+  <a href="https://nightly.link/Gergish001/Amalgam/workflows/msbuild/master/Amalgamx64ReleaseAVX2PDB.zip">
     <img src=".github/assets/pdb_avx2.png" alt="PDB AVX2" width="auto" height="auto">
   </a>
 </p>

@@ -65,6 +65,7 @@ void CTickshiftHandler::Doubletap(CTFPlayer* pLocal, CUserCmd* pCmd)
 		G::ShiftedGoal = G::ShiftedTicks - std::min(Vars::CL_Move::Doubletap::TickLimit.Value - 1, G::MaxShift);
 }
 
+
 int CTickshiftHandler::GetTicks()
 {
 	if (G::DoubleTap && G::ShiftedGoal < G::ShiftedTicks)
@@ -106,7 +107,6 @@ bool CTickshiftHandler::ValidWeapon(CTFWeaponBase* pWeapon)
 	case TF_WEAPON_JAR_GAS:
 	case TF_WEAPON_LASER_POINTER:
 	case TF_WEAPON_MEDIGUN:
-	case TF_WEAPON_SNIPERRIFLE:
 	case TF_WEAPON_SNIPERRIFLE_DECAP:
 	case TF_WEAPON_SNIPERRIFLE_CLASSIC:
 	case TF_WEAPON_COMPOUND_BOW:
@@ -115,56 +115,6 @@ bool CTickshiftHandler::ValidWeapon(CTFWeaponBase* pWeapon)
 	}
 
 	return true;
-}
-
-void CTickshiftHandler::AntiWarp(CTFPlayer* pLocal, CUserCmd* pCmd)
-{
-	static Vec3 vVelocity = {};
-	if (G::AntiWarp)
-	{
-		const int iDoubletapTicks = F::Ticks.GetTicks();
-
-		Vec3 vAngles; Math::VectorAngles(vVelocity, vAngles);
-		vAngles.y = pCmd->viewangles.y - vAngles.y;
-		Vec3 vForward; Math::AngleVectors(vAngles, &vForward);
-		vForward *= vVelocity.Length();
-
-		if (iDoubletapTicks > std::max(Vars::CL_Move::Doubletap::TickLimit.Value - 8, 3))
-		{
-			pCmd->forwardmove = -vForward.x;
-			pCmd->sidemove = -vForward.y;
-		}
-		else if (iDoubletapTicks > 3)
-		{
-			pCmd->forwardmove = pCmd->sidemove = 0.f;
-			pCmd->buttons &= ~(IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT);
-		}
-		else
-		{
-			pCmd->forwardmove = vForward.x;
-			pCmd->sidemove = vForward.y;
-		}
-	}
-	else
-		vVelocity = pLocal->m_vecVelocity();
-
-	/*
-	static bool bSet = false;
-
-	if (!G::AntiWarp)
-	{
-		bSet = false;
-		return;
-	}
-
-	if (G::Attacking != 1 && !bSet)
-	{
-		bSet = true;
-		SDK::StopMovement(pLocal, pCmd);
-	}
-	else
-		pCmd->forwardmove = pCmd->sidemove = 0.f;
-	*/
 }
 
 void CTickshiftHandler::CLMoveFunc(float accumulated_extra_samples, bool bFinalTick)
@@ -256,7 +206,6 @@ void CTickshiftHandler::MovePost(CTFPlayer* pLocal, CUserCmd* pCmd)
 		return;
 
 	Doubletap(pLocal, pCmd);
-	AntiWarp(pLocal, pCmd);
 }
 
 void CTickshiftHandler::Run(float accumulated_extra_samples, bool bFinalTick, CTFPlayer* pLocal)

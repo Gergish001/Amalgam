@@ -28,7 +28,7 @@ void CMenu::DrawMenu()
 		auto vWindowSize = vMainWindowSize = GetWindowSize();
 
 		SetCursorPos({ 8, 8 });
-		PushStyleVar(ImGuiStyleVar_ChildRounding, 3.f);
+		PushStyleVar(ImGuiStyleVar_ChildRounding, 2.f);
 		PushStyleColor(ImGuiCol_ChildBg, F::Render.Background.Value);
 		if (BeginChild("Main", { vWindowSize.x - 16, vWindowSize.y - 16 }, false, ImGuiWindowFlags_AlwaysUseWindowPadding))
 		{
@@ -282,8 +282,8 @@ void CMenu::MenuAimbot()
 					FToggle("Warp", Vars::CL_Move::Doubletap::Warp, FToggle_Right);
 					FToggle("Recharge ticks", Vars::CL_Move::Doubletap::RechargeTicks, FToggle_Left);
 					FToggle("Anti-warp", Vars::CL_Move::Doubletap::AntiWarp, FToggle_Right);
-					FSlider("Tick limit", Vars::CL_Move::Doubletap::TickLimit, 2, 22, 1, "%i", FSlider_Clamp);
-					FSlider("Warp rate", Vars::CL_Move::Doubletap::WarpRate, 2, 22, 1, "%i", FSlider_Clamp);
+					FSlider("Tick limit", Vars::CL_Move::Doubletap::TickLimit, 2, 25, 1, "%i", FSlider_Clamp);
+					FSlider("Warp rate", Vars::CL_Move::Doubletap::WarpRate, 2, 24, 1, "%i", FSlider_Clamp);
 					FSlider("Passive recharge", Vars::CL_Move::Doubletap::PassiveRecharge, 0, 67, 1, "%i", FSlider_Clamp);
 				} EndSection();
 				if (Section("Fakelag"))
@@ -303,7 +303,7 @@ void CMenu::MenuAimbot()
 				{
 					FToggle("Enabled", Vars::AntiHack::AntiAim::Enabled);
 					FDropdown("Real pitch", Vars::AntiHack::AntiAim::PitchReal, { "None", "Up", "Down", "Zero", "Jitter", "Reverse jitter" }, {}, FDropdown_Left);
-					FDropdown("Fake pitch", Vars::AntiHack::AntiAim::PitchFake, { "None", "Up", "Down", "Jitter", "Reverse jitter" }, {}, FDropdown_Right);
+					FDropdown("Fake pitch", Vars::AntiHack::AntiAim::PitchFake, { "None", "Up", "Down", "Zero", "Jitter", "Reverse jitter" }, {}, FDropdown_Right);
 					FDropdown("Real yaw", Vars::AntiHack::AntiAim::YawReal, { "Forward", "Left", "Right", "Backwards", "Edge", "Jitter", "Spin" }, {}, FDropdown_Left);
 					FDropdown("Fake yaw", Vars::AntiHack::AntiAim::YawFake, { "Forward", "Left", "Right", "Backwards", "Edge", "Jitter", "Spin" }, {}, FDropdown_Right);
 					FDropdown("Real offset", Vars::AntiHack::AntiAim::RealYawMode, { "View", "Target" }, {}, FDropdown_Left);

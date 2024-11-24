@@ -262,7 +262,7 @@ void CMenu::MenuAimbot()
 				{
 					if (Section("debug## melee"))
 					{
-						FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 10, 14);
+						FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 0, 66);
 						FToggle("backstab account ping", Vars::Aimbot::Melee::BackstabAccountPing, FToggle_Left);
 						FToggle("backstab double test", Vars::Aimbot::Melee::BackstabDoubleTest, FToggle_Right);
 					}
@@ -284,8 +284,8 @@ void CMenu::MenuAimbot()
 					FToggle("Warp", Vars::CL_Move::Doubletap::Warp, FToggle_Right);
 					FToggle("Recharge ticks", Vars::CL_Move::Doubletap::RechargeTicks, FToggle_Left);
 					FToggle("Anti-warp", Vars::CL_Move::Doubletap::AntiWarp, FToggle_Right);
-					FSlider("Tick limit", Vars::CL_Move::Doubletap::TickLimit, 2, 22, 1, "%i", FSlider_Clamp);
-					FSlider("Warp rate", Vars::CL_Move::Doubletap::WarpRate, 2, 22, 1, "%i", FSlider_Clamp);
+					FSlider("Tick limit", Vars::CL_Move::Doubletap::TickLimit, 2, 25, 1, "%i", FSlider_Clamp);
+					FSlider("Warp rate", Vars::CL_Move::Doubletap::WarpRate, 2, 24, 1, "%i", FSlider_Clamp);
 					FSlider("Passive recharge", Vars::CL_Move::Doubletap::PassiveRecharge, 0, 67, 1, "%i", FSlider_Clamp);
 				} EndSection();
 				if (Section("Fakelag"))
@@ -293,10 +293,10 @@ void CMenu::MenuAimbot()
 					FDropdown("Fakelag", Vars::CL_Move::Fakelag::Fakelag, { "Off", "Plain", "Random", "Adaptive" }, {}, FSlider_Left);
 					FDropdown("Options", Vars::CL_Move::Fakelag::Options, { "Only moving", "On unduck", "Not airborne" }, {}, FDropdown_Multi | FSlider_Right);
 					PushTransparent(FGet(Vars::CL_Move::Fakelag::Fakelag) != Vars::CL_Move::Fakelag::FakelagEnum::Plain);
-						FSlider("Plain ticks", Vars::CL_Move::Fakelag::PlainTicks, 1, 22, 1, "%i", FSlider_Clamp | FSlider_Left);
+						FSlider("Plain ticks", Vars::CL_Move::Fakelag::PlainTicks, 1, 24, 1, "%i", FSlider_Clamp | FSlider_Left);
 					PopTransparent();
 					PushTransparent(FGet(Vars::CL_Move::Fakelag::Fakelag) != Vars::CL_Move::Fakelag::FakelagEnum::Random);
-						FSlider("Random ticks", Vars::CL_Move::Fakelag::RandomTicks, 1, 22, 1, "%i - %i", FSlider_Clamp | FSlider_Right);
+						FSlider("Random ticks", Vars::CL_Move::Fakelag::RandomTicks, 1, 24, 1, "%i - %i", FSlider_Clamp | FSlider_Right);
 					PopTransparent();
 					FToggle("Unchoke on attack", Vars::CL_Move::Fakelag::UnchokeOnAttack, FToggle_Left);
 					FToggle("Retain blastjump", Vars::CL_Move::Fakelag::RetainBlastJump, FToggle_Right);
@@ -344,7 +344,7 @@ void CMenu::MenuAimbot()
 				{
 					FToggle("Speedhack", Vars::CL_Move::SpeedEnabled);
 					PushTransparent(!FGet(Vars::CL_Move::SpeedEnabled));
-						FSlider("SpeedHack factor", Vars::CL_Move::SpeedFactor, 1, 50, 1);
+						FSlider("SpeedHack factor", Vars::CL_Move::SpeedFactor, 1, 66, 1);
 					PopTransparent();
 				} EndSection();
 				if (Section("Cheater Detection"))

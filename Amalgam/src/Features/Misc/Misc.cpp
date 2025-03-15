@@ -273,31 +273,24 @@ void CMisc::CheatsBypass()
 
 void CMisc::PingReducer()
 {
-	auto pNetChan = reinterpret_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo());
-	if (!pNetChan)
-		return;
-
-	static auto cl_cmdrate = U::ConVars.FindVar("cl_cmdrate");
-	const int iCmdRate = cl_cmdrate ? cl_cmdrate->GetInt() : 66;
-
-	// force highest cl_updaterate command possible
-	static auto sv_maxupdaterate = U::ConVars.FindVar("sv_maxupdaterate");
-	const int iMaxUpdateRate = sv_maxupdaterate ? sv_maxupdaterate->GetInt() : 66;
+	const ConVar* cl_cmdrate = U::ConVars.FindVar("cl_cmdrate");
+	auto netChannel = reinterpret_cast<CNetChannel*>(I::EngineClient->GetNetChannelInfo());
+	if (cl_cmdrate == nullptr || netChannel == nullptr) { return; }
 
 	static Timer updateRateTimer{};
-	if (updateRateTimer.Run(100))
+	if (updateRateTimer.Run(250))
 	{
-		if (iWishUpdaterate != iMaxUpdateRate)
+		if (Vars::Misc::Exploits::PingReducer.Value)
 		{
-			NET_SetConVar cmd("cl_updaterate", std::to_string(iWishUpdaterate = iMaxUpdateRate).c_str());
-			pNetChan->SendNetMsg(cmd);
+			if (!H::Entities.GetPR()) return;
+			const int currentPing = H::Entities.GetPR()->GetPing(I::EngineClient->GetLocalPlayer());
+			NET_SetConVar cmd("cl_cmdrate", (Vars::Misc::Exploits::PingTarget.Value <= currentPing) ? "-1" : std::to_string(cl_cmdrate->GetInt()).c_str());
+			netChannel->SendNetMsg(cmd);
 		}
-
-		const int iTarget = Vars::Misc::Exploits::PingReducer.Value ? Vars::Misc::Exploits::PingTarget.Value : iCmdRate;
-		if (iWishCmdrate != iTarget)
+		else
 		{
-			NET_SetConVar cmd("cl_cmdrate", std::to_string(iWishCmdrate = iTarget).c_str());
-			pNetChan->SendNetMsg(cmd);
+			NET_SetConVar cmd("cl_cmdrate", std::to_string(cl_cmdrate->GetInt()).c_str());
+			netChannel->SendNetMsg(cmd);
 		}
 	}
 }

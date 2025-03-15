@@ -1098,7 +1098,7 @@ void CMenu::MenuMisc()
 					FToggle("Pure bypass", Vars::Misc::Exploits::BypassPure, FToggle_Right);
 					FToggle("Ping reducer", Vars::Misc::Exploits::PingReducer, FToggle_Left);
 					PushTransparent(!FGet(Vars::Misc::Exploits::PingReducer));
-						FSlider("cl_cmdrate", Vars::Misc::Exploits::PingTarget, 1, 66, 1, "%i", FSlider_Right | FSlider_Clamp);
+						FSlider("cl_cmdrate", Vars::Misc::Exploits::PingTarget, 1, 1000, 1, "%i", FSlider_Right | FSlider_Clamp);
 					PopTransparent();
 					SetCursorPosY(GetCursorPosY() - 8);
 					FToggle("Equip region unlock", Vars::Misc::Exploits::EquipRegionUnlock, FToggle_Left);

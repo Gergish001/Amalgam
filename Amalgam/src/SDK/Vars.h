@@ -89,7 +89,7 @@ inline ConfigVar<T>::ConfigVar(T value, std::string name, int iFlags)
 #define VISUAL (1 << 0)
 #define NOSAVE (1 << 1)
 #define NOBIND (1 << 2)
-#define DEBUGVAR NOSAVE
+#define DEBUGVAR NONE
 
 namespace Vars
 {

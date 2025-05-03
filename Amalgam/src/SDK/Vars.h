@@ -155,7 +155,7 @@ public:
 #define VISUAL (1 << 31)
 #define NOSAVE (1 << 30)
 #define NOBIND (1 << 29)
-#define DEBUGVAR (1 << 28)
+#define DEBUGVAR NONE
 
 // flags to be automatically used in widgets. keep these as the same values as the flags in components, do not include visual flags
 #define SLIDER_CLAMP (1 << 2)

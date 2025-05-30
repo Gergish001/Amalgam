@@ -430,8 +430,8 @@ namespace Vars
 		CVar(Warp, "Warp", false);
 		CVar(RechargeTicks, "Recharge ticks", false);
 		CVar(AntiWarp, "Anti-warp", true);
-		CVar(TickLimit, "Tick limit", 22, SLIDER_CLAMP, 2, 22);
-		CVar(WarpRate, "Warp rate", 22, SLIDER_CLAMP, 2, 22);
+		CVar(TickLimit, "Tick limit", 22, SLIDER_CLAMP, 2, 24);
+		CVar(WarpRate, "Warp rate", 22, SLIDER_CLAMP, 2, 24);
 		CVar(PassiveRecharge, "Passive recharge", 0, SLIDER_CLAMP, 0, 67);
 		CVar(RechargeLimit, "Recharge limit", 24, SLIDER_CLAMP, 1, 24);
 	NAMESPACE_END(DoubleTap)
